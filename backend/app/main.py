@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -10,8 +10,12 @@ from .models.database import Base
 from .api import auth, telegram, campaigns
 
 
-# Database setup
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+# Database setup - поддержка SQLite и PostgreSQL
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+else:
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

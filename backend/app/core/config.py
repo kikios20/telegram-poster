@@ -4,12 +4,12 @@ import os
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Kikio Telegram Poster"
+    PROJECT_NAME: str = "TelegramPoster"
     
-    # Database
+    # Database - используем SQLite для простоты
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/kikio"
+        "sqlite+aiosqlite:///./telegram_poster.db"
     )
     
     # Redis

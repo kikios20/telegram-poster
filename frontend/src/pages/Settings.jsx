@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTelegramStore, useAuthStore } from '../hooks/useStore'
 import { 
   Settings, 
-  Telegram, 
+  Send, 
   LogOut, 
   CheckCircle, 
   XCircle, 
@@ -103,7 +103,7 @@ export function SettingsPage() {
             {status.connected ? (
               <CheckCircle size={24} className="text-green-400" />
             ) : (
-              <Telegram size={24} className="text-gray-400" />
+              <Send size={24} className="text-gray-400" />
             )}
           </div>
           
