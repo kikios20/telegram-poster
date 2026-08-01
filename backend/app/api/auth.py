@@ -1,0 +1,155 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from typing import Optional
+
+from ..core.config import settings
+from ..models.database import User, TelegramSession, generate_api_key
+from .schemas import UserCreate, UserLogin, Token, UserResponse
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
+
+
+async def get_db():
+    # This is a placeholder - will be replaced with actual dependency
+    pass
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    # Get user from DB
+    # This needs proper session management
+    raise HTTPException(status_code=500, detail="Database session not configured")
+
+
+@router.post("/register", response_model=UserResponse)
+async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+    """Register a new user"""
+    # Check if email exists
+    stmt = select(User).where(User.email == user_data.email)
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    
+    # Create user
+    hashed_password = get_password_hash(user_data.password)
+    api_key = generate_api_key()
+    
+    user = User(
+        email=user_data.email,
+        hashed_password=hashed_password,
+        api_key=api_key
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        is_premium=user.is_premium,
+        has_telegram=len(user.telegram_sessions) > 0 if user.telegram_sessions else False,
+        created_at=user.created_at
+    )
+
+
+@router.post("/login", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    """Login with email and password"""
+    stmt = select(User).where(User.email == form_data.username)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Account is deactivated"
+        )
+    
+    access_token = create_access_token(data={"sub": user.id})
+    return Token(access_token=access_token)
+
+
+@router.post("/login/api-key", response_model=Token)
+async def login_with_api_key(api_key: str, db: AsyncSession = Depends(get_db)):
+    """Login with API key"""
+    stmt = select(User).where(User.api_key == api_key)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key"
+        )
+    
+    access_token = create_access_token(data={"sub": user.id})
+    return Token(access_token=access_token)
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user info"""
+    has_telegram = len(current_user.telegram_sessions) > 0 if current_user.telegram_sessions else False
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        is_premium=current_user.is_premium,
+        has_telegram=has_telegram,
+        created_at=current_user.created_at
+    )
+
+
+@router.get("/api-key")
+async def get_api_key(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get user's API key"""
+    return {"api_key": current_user.api_key}

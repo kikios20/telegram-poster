@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.npm
+.yarn
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Sessions
+sessions/
+*.session
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Build
+frontend/dist/
+frontend/build/
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
