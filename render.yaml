@@ -1,31 +1,16 @@
 # Render.com Blueprint
-# Free hosting for Python + Node.js
-
 services:
-  # Backend (Python/FastAPI)
   - type: web
     name: telegram-poster-api
-    env: python
+    runtime: python
     region: frankfurt
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false
-      - key: SECRET_KEY
-        generateValue: true
-
-  # Frontend (Static)
-  - type: web
-    name: telegram-poster-frontend
-    env: node
-    region: frankfurt
-    plan: free
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: frontend/dist
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
+        value: sqlite+aiosqlite:///./telegram_poster.db
+      - key: PYTHON_VERSION
+        value: "3.11"
