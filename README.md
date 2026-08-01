@@ -1,11 +1,7 @@
-# Kikio - Telegram Mass Messaging Platform
+# TelegramPoster - Mass Messaging Platform
 
 <p align="center">
-  <img src="frontend/public/kikio.svg" alt="Kikio Logo" width="80" />
-</p>
-
-<p align="center">
-  <strong>Kikio</strong> — платформа для массовой рассылки сообщений в Telegram
+  <strong>TelegramPoster</strong> — платформа для массовой рассылки сообщений в Telegram
 </p>
 
 <p align="center">
@@ -16,14 +12,39 @@
 
 ---
 
-## 🚀 Быстрый старт
+## 🆓 Бесплатный хостинг на Render.com
 
-### Prerequisites
+### 1. Создай аккаунт
+Перейди на [render.com](https://render.com) и зарегистрируйся (бесплатно)
+
+### 2. Задеплой Backend (Python)
+1. Нажми **"New +"** → **"Blueprint"**
+2. Подключи GitHub: `kikios20/telegram-poster`
+3. Нажми **"Apply Blueprint"**
+4. В `DATABASE_URL` напиши: `sqlite+aiosqlite:///./telegram_poster.db`
+5. Жди деплой (~3 мин)
+6. Скопируй URL бэкенда
+
+### 3. Задеплой Frontend (React)
+1. Нажми **"New +"** → **"Static Site"**
+2. Подключи тот же GitHub репозиторий
+3. Build command: `npm install && npm run build`
+4. Publish directory: `frontend/dist`
+5. Добавь переменную окружения:
+   - `VITE_API_URL` = твой URL бэкенда (без / в конце)
+6. Deploy!
+
+### 4. Готово! 🎉
+Сайт будет доступен по URL от Render (бесплатно).
+
+---
+
+## 🚀 Локальная разработка
+
+### Требования
 
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL 14+
-- Redis (optional, for production)
 
 ### Backend
 
