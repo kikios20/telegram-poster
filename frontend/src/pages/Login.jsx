@@ -175,8 +175,7 @@ export function Login() {
               </div>
 
               <button
-                type="button"
-                onClick={() => handleEmailLogin({ preventDefault: () => {} })}
+                type="submit"
                 disabled={isLoading}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
               >
