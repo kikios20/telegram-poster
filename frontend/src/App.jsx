@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuthStore } from './hooks/useStore'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
@@ -25,6 +26,27 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+// Route for automatic login via URL params (for testing)
+function AutoLogin() {
+  const [searchParams] = useSearchParams()
+  const { login } = useAuthStore()
+  
+  useEffect(() => {
+    const email = searchParams.get('email')
+    const password = searchParams.get('password')
+    if (email && password) {
+      login(email, password).then(() => {
+        window.location.href = '/dashboard'
+      })
+    }
+  }, [])
+  
+  return <div className="min-h-screen flex items-center justify-center">
+    <div className="spinner" />
+    <span className="ml-3">Вход...</span>
+  </div>
+}
+
 // Temporary test route - no protection
 function TestRoute({ children }) {
   return children
@@ -35,6 +57,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/autologin" element={<AutoLogin />} />
       <Route path="/test-auth" element={<TestRoute><TestAuth /></TestRoute>} />
       
       <Route
