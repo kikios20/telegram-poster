@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
-from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
 from ..core.config import settings
 from ..core.database import get_db
@@ -17,31 +17,24 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
-executor = ThreadPoolExecutor()
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    loop = None
-    try:
-        import asyncio
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    future = executor.submit(pwd_context.verify, plain_password, hashed_password)
-    return future.result()
+def verify_password_sync(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 
-def get_password_hash(password: str) -> str:
-    loop = None
-    try:
-        import asyncio
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    future = executor.submit(pwd_context.hash, password[:72])
-    return future.result()
+def get_password_hash_sync(password: str) -> str:
+    return pwd_context.hash(password[:72])
+
+
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, verify_password_sync, plain_password, hashed_password)
+
+
+async def get_password_hash(password: str) -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, get_password_hash_sync, password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -92,7 +85,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         )
     
     # Create user
-    hashed_password = get_password_hash(user_data.password)
+    hashed_password = await get_password_hash(user_data.password)
     api_key = generate_api_key()
     
     user = User(
@@ -120,7 +113,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not await verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
