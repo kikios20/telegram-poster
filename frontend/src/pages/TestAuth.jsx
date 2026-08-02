@@ -2,12 +2,39 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../hooks/useStore'
 
+const API_URL = 'https://telegram-poster-api.onrender.com/api'
+
 export function TestAuth() {
   const navigate = useNavigate()
   const { token, isAuthenticated, login } = useAuthStore()
   
+  // Auto login on mount if not authenticated
   useEffect(() => {
-    console.log('TestAuth mounted:', { token, isAuthenticated })
+    if (!isAuthenticated && !token) {
+      console.log('Auto login...')
+      fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'username=testagent999@test.com&password=testpass456',
+      })
+        .then(r => r.json())
+        .then(data => {
+          console.log('Login response:', data)
+          if (data.access_token) {
+            useAuthStore.setState({ 
+              token: data.access_token, 
+              isAuthenticated: true, 
+              user: null 
+            })
+            navigate('/dashboard')
+          }
+        })
+        .catch(err => {
+          console.error('Login error:', err)
+        })
+    }
   }, [])
   
   const handleLogin = async () => {
