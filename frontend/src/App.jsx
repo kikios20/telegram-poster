@@ -8,9 +8,10 @@ import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, token } = useAuthStore()
   
-  if (!isAuthenticated) {
+  // If has token, consider authenticated
+  if (!isAuthenticated && !token) {
     return <Navigate to="/login" replace />
   }
   

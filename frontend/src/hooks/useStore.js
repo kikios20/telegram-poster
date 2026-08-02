@@ -84,13 +84,10 @@ export const useAuthStore = create(
     {
       name: 'kikio-auth',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ token: state.token }),
-      onRehydrateStorage: () => (state) => {
-        // After rehydration, set isAuthenticated based on token
-        if (state?.token) {
-          state.isAuthenticated = true
-        }
-      },
+      partialize: (state) => ({ 
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 )
