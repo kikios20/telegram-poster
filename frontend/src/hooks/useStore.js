@@ -69,8 +69,8 @@ export const useAuthStore = create((set, get) => ({
     set({ token: access_token, isAuthenticated: true })
     setStoredAuth(access_token, true)
     
-    // Fetch user info
-    await get().fetchUser()
+    // Fetch user info (don't await to avoid blocking)
+    get().fetchUser()
     
     return true
   },

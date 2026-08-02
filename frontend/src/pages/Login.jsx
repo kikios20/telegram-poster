@@ -24,8 +24,10 @@ export function Login() {
     try {
       await login(email, password)
       // Navigate immediately after login succeeds
+      window.alert('Login success!')
       navigate('/dashboard', { replace: true })
     } catch (err) {
+      window.alert('Login failed: ' + (err.response?.data?.detail || 'Unknown error'))
       setError(err.response?.data?.detail || 'Ошибка входа')
       setIsLoading(false)
     }
