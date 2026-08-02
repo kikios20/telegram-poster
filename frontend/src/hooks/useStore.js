@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import axios from 'axios'
 
 const API_URL = 'https://telegram-poster-api.onrender.com/api'
@@ -82,6 +82,7 @@ export const useAuthStore = create(
     }),
     {
       name: 'kikio-auth',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ token: state.token }),
     }
   )
