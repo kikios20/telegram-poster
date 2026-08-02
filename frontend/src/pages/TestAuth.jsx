@@ -1,65 +1,51 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore, api } from '../hooks/useStore'
 
 export function TestAuth() {
   const navigate = useNavigate()
-  const { token, isAuthenticated, login } = useAuthStore()
-  const [status, setStatus] = useState('Initializing...')
-  const [local, setLocal] = useState('')
-  
-  useEffect(() => {
-    setLocal(localStorage.getItem('kikio-auth') || 'empty')
-    
-    // Wait for Zustand to hydrate
-    const checkHydrated = setInterval(() => {
-      const hydrated = useAuthStore.persist.hasHydrated()
-      setStatus(`Hydrated: ${hydrated}, token: ${useAuthStore.getState().token}, auth: ${useAuthStore.getState().isAuthenticated}`)
-      setLocal(localStorage.getItem('kikio-auth') || 'empty')
+  const [debugInfo, setDebugInfo] = useState('')
+
+  const handleLogin = async () => {
+    let log = ''
+    try {
+      log += '1. CALLING API...\n\n'
+      const response = await api.post('/auth/login',
+        `username=${encodeURIComponent('testagent999@test.com')}&password=${encodeURIComponent('testpass456')}`,
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      )
+      log += '2. RAW RESPONSE: ' + JSON.stringify(response.data) + '\n\n'
       
-      if (hydrated && !useAuthStore.getState().token) {
-        setStatus('Hydrated, starting login...')
-        clearInterval(checkHydrated)
-        
-        api.post('/auth/login', 
-          `username=${encodeURIComponent('testagent999@test.com')}&password=${encodeURIComponent('testpass456')}`,
-          {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            }
-          }
-        )
-          .then(r => r.data)
-          .then(data => {
-            setStatus('Login response: ' + JSON.stringify(data))
-            if (data.access_token) {
-              useAuthStore.setState({ 
-                token: data.access_token, 
-                isAuthenticated: true, 
-                user: null 
-              })
-              setLocal(localStorage.getItem('kikio-auth') || 'still empty!')
-              setTimeout(() => navigate('/dashboard'), 500)
-            }
-          })
-          .catch(err => {
-            setStatus('Error: ' + err.message)
-          })
-      }
-    }, 100)
-    
-    return () => clearInterval(checkHydrated)
-  }, [])
-  
+      const { access_token } = response.data
+      log += '3. TOKEN: ' + access_token + '\n\n'
+      
+      useAuthStore.setState({ token: access_token, isAuthenticated: true })
+      log += '4. STORE AFTER SET: ' + JSON.stringify(useAuthStore.getState()) + '\n\n'
+      
+      log += '5. LOCALSTORAGE: ' + localStorage.getItem('kikio-auth') + '\n\n'
+      
+      log += '6. NAVIGATING TO /dashboard...'
+      navigate('/dashboard')
+    } catch (err) {
+      log += 'ERROR: ' + err.message + '\n' + JSON.stringify(err.response?.data)
+    }
+    setDebugInfo(log)
+  }
+
   return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
-      <h1>Test Auth Page</h1>
-      <p>Status: {status}</p>
-      <p>localStorage: {local}</p>
-      <br />
-      <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', fontSize: '16px' }}>
-        Go to Dashboard
+    <div style={{ padding: '20px', fontFamily: 'monospace', fontSize: '14px' }}>
+      <h1>Test Auth</h1>
+      <button onClick={handleLogin} style={{ padding: '10px 20px', fontSize: '16px', marginBottom: '20px' }}>
+        Run Login Test
       </button>
+      <pre style={{ 
+        background: '#1a1a1a', 
+        color: '#0f0', 
+        padding: '20px', 
+        borderRadius: '8px',
+        whiteSpace: 'pre-wrap',
+        textAlign: 'left'
+      }}>{debugInfo || 'Click button to run test...'}</pre>
     </div>
   )
 }
