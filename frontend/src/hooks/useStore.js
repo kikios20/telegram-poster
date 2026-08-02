@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = 'https://telegram-poster-api.onrender.com'
 
 // Create axios instance with interceptors
 const api = axios.create({
