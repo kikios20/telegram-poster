@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Login</title>
+</head>
+<body>
+  <h1>Test Login</h1>
+  <button id="loginBtn">Login</button>
+  <pre id="result"></pre>
+  <script>
+    document.getElementById('loginBtn').onclick = async () => {
+      try {
+        const resp = await fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: 'username=newuser123@test.com&password=password123'
+        });
+        const data = await resp.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.access_token) {
+          localStorage.setItem('kikio-auth', JSON.stringify({token: data.access_token, isAuthenticated: true}));
+          window.location.href = '/dashboard';
+        }
+      } catch(e) {
+        document.getElementById('result').textContent = 'ERROR: ' + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
