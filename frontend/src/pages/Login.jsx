@@ -141,7 +141,7 @@ export function Login() {
               key="email-form"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              onSubmit={handleEmailLogin}
+              onSubmit={(e) => { e.preventDefault(); handleEmailLogin(e); }}
               className="space-y-4"
             >
               <div>
@@ -179,7 +179,8 @@ export function Login() {
               </div>
 
               <motion.button
-                type="submit"
+                type="button"
+                onClick={() => handleEmailLogin({ preventDefault: () => {} })}
                 disabled={isLoading}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
                 whileHover={{ scale: 1.02 }}
