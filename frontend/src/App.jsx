@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from './hooks/useStore'
 import { Layout } from './components/Layout'
