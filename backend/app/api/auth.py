@@ -6,6 +6,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
 
 from ..core.config import settings
 from ..core.database import get_db
@@ -16,14 +17,31 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+executor = ThreadPoolExecutor()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    loop = None
+    try:
+        import asyncio
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    future = executor.submit(pwd_context.verify, plain_password, hashed_password)
+    return future.result()
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password[:72])
+    loop = None
+    try:
+        import asyncio
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    future = executor.submit(pwd_context.hash, password[:72])
+    return future.result()
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
