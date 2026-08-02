@@ -12,7 +12,7 @@ export function TestAuth() {
   
   const handleLogin = async () => {
     try {
-      await login('newuser123@test.com', 'password123')
+      await login('testagent999@test.com', 'testpass456')
       console.log('Login success, navigating to dashboard...')
       navigate('/dashboard')
     } catch (e) {
@@ -27,7 +27,7 @@ export function TestAuth() {
       <p>Token: {token ? '✓ exists' : '✗ missing'}</p>
       <p>isAuthenticated: {String(isAuthenticated)}</p>
       <p>localStorage: {localStorage.getItem('kikio-auth')}</p>
-      <button onClick={handleLogin} style={{ padding: '10px 20px', fontSize: '16px' }}>
+      <button id="login-btn" onClick={handleLogin} style={{ padding: '10px 20px', fontSize: '16px' }}>
         Login via Zustand
       </button>
       <br /><br />

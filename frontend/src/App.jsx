@@ -32,42 +32,47 @@ function AutoLogin() {
   const navigate = useNavigate()
   
   useEffect(() => {
-    const email = searchParams.get('email')
-    const password = searchParams.get('password')
-    console.log('AutoLogin:', email, password)
-    if (email && password) {
-      fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-      })
-        .then(r => {
-          console.log('Response status:', r.status)
-          return r.json()
+    try {
+      const email = searchParams.get('email')
+      const password = searchParams.get('password')
+      console.log('AutoLogin:', email, password)
+      if (email && password) {
+        fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
         })
-        .then(data => {
-          console.log('Data:', data)
-          if (data.access_token) {
-            useAuthStore.setState({ 
-              token: data.access_token, 
-              isAuthenticated: true, 
-              user: null 
-            })
-            console.log('Navigating to dashboard')
-            navigate('/dashboard')
-          } else {
-            console.log('No token, navigating to login')
+          .then(r => {
+            console.log('Response status:', r.status)
+            return r.json()
+          })
+          .then(data => {
+            console.log('Data:', data)
+            if (data.access_token) {
+              useAuthStore.setState({ 
+                token: data.access_token, 
+                isAuthenticated: true, 
+                user: null 
+              })
+              console.log('Navigating to dashboard')
+              navigate('/dashboard')
+            } else {
+              console.log('No token, navigating to login')
+              navigate('/login')
+            }
+          })
+          .catch(err => {
+            console.error('Error:', err)
             navigate('/login')
-          }
-        })
-        .catch(err => {
-          console.error('Error:', err)
-          navigate('/login')
-        })
-    } else {
-      console.log('No email/password, navigating to login')
+          })
+      } else {
+        console.log('No email/password, navigating to login')
+        navigate('/login')
+      }
+    } catch (err) {
+      console.error('AutoLogin error:', err)
       navigate('/login')
     }
   }, [])
