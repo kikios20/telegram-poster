@@ -58,11 +58,14 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: initialAuth.isAuthenticated,
   
   login: async (email, password) => {
-    const formData = new FormData()
-    formData.append('username', email)
-    formData.append('password', password)
-    
-    const response = await api.post('/auth/login', formData)
+    const response = await api.post('/auth/login', 
+      `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
     const { access_token } = response.data
     
     set({ token: access_token, isAuthenticated: true })
