@@ -173,12 +173,30 @@ export function Login() {
               </div>
 
               <a
-                href="#login"
+                href={`/api/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`}
                 onClick={(e) => {
                   e.preventDefault()
-                  handleEmailLogin(e)
+                  // Вызываем login напрямую через fetch
+                  fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+                  })
+                    .then(r => r.json())
+                    .then(data => {
+                      if (data.access_token) {
+                        localStorage.setItem('kikio-auth', JSON.stringify({
+                          state: { token: data.access_token, isAuthenticated: true },
+                          version: 0
+                        }))
+                        window.location.href = '/dashboard'
+                      }
+                    })
+                    .catch(err => console.error(err))
                 }}
-                className={`btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6 ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
+                className={`btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6 ${isLoading || !email || !password ? 'pointer-events-none opacity-50' : ''}`}
               >
                 {isLoading ? (
                   <div className="spinner" />
