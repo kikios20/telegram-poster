@@ -41,8 +41,8 @@ export function Register() {
       // Автоматически входим после регистрации
       await login(email, password)
       
-      // Force navigation after state update
-      setTimeout(() => navigate('/dashboard'), 100)
+      // Navigate immediately after login succeeds
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка регистрации')
       setIsLoading(false)
