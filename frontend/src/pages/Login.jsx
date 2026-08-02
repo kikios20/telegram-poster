@@ -18,7 +18,6 @@ export function Login() {
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()
-    window.alert('handleEmailLogin called! email=' + email)
     setError('')
     setIsLoading(true)
     
@@ -174,8 +173,9 @@ export function Login() {
               </div>
 
               <button
-                type="submit"
+                type="button"
                 disabled={isLoading}
+                onClick={handleEmailLogin}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
               >
                 {isLoading ? (
