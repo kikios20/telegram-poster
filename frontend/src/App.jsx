@@ -29,6 +29,7 @@ function ProtectedRoute({ children }) {
 // Route for automatic login via URL params (for testing)
 function AutoLogin() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   
   useEffect(() => {
     const email = searchParams.get('email')
@@ -44,20 +45,22 @@ function AutoLogin() {
         .then(r => r.json())
         .then(data => {
           if (data.access_token) {
-            localStorage.setItem('kikio-auth', JSON.stringify({
-              state: { token: data.access_token, isAuthenticated: true, user: null },
-              version: 0
-            }))
-            window.location.href = '/dashboard'
+            // Используем Zustand store напрямую
+            useAuthStore.setState({ 
+              token: data.access_token, 
+              isAuthenticated: true, 
+              user: null 
+            })
+            navigate('/dashboard')
           } else {
-            window.location.href = '/login'
+            navigate('/login')
           }
         })
         .catch(() => {
-          window.location.href = '/login'
+          navigate('/login')
         })
     } else {
-      window.location.href = '/login'
+      navigate('/login')
     }
   }, [])
   
