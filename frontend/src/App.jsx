@@ -12,6 +12,8 @@ import { TestAuth } from './pages/TestAuth'
 function ProtectedRoute({ children }) {
   const { isAuthenticated, token } = useAuthStore()
   const hasHydrated = useAuthStore.persist.hasHydrated()
+  
+  console.log('ProtectedRoute:', { isAuthenticated, token, hasHydrated, children })
 
   if (!hasHydrated) {
     return <div className="min-h-screen flex items-center justify-center">
