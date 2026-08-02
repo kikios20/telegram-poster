@@ -172,11 +172,13 @@ export function Login() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={handleEmailLogin}
-                className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
+              <a
+                href="#login"
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleEmailLogin(e)
+                }}
+                className={`btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6 ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
               >
                 {isLoading ? (
                   <div className="spinner" />
@@ -186,7 +188,7 @@ export function Login() {
                     <ArrowRight size={18} />
                   </>
                 )}
-              </button>
+              </a>
 
               <p className="text-center text-gray-400 text-sm mt-4">
                 Нет аккаунта?{' '}
