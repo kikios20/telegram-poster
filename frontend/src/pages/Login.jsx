@@ -23,10 +23,10 @@ export function Login() {
     
     try {
       await login(email, password)
-      navigate('/dashboard')
+      // Force navigation after state update
+      setTimeout(() => navigate('/dashboard'), 100)
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка входа')
-    } finally {
       setIsLoading(false)
     }
   }
@@ -38,10 +38,10 @@ export function Login() {
     
     try {
       await loginWithApiKey(apiKey)
-      navigate('/dashboard')
+      // Force navigation after state update
+      setTimeout(() => navigate('/dashboard'), 100)
     } catch (err) {
       setError(err.response?.data?.detail || 'Неверный ключ API')
-    } finally {
       setIsLoading(false)
     }
   }

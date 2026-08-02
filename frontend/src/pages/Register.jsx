@@ -40,10 +40,11 @@ export function Register() {
 
       // Автоматически входим после регистрации
       await login(email, password)
-      navigate('/dashboard')
+      
+      // Force navigation after state update
+      setTimeout(() => navigate('/dashboard'), 100)
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка регистрации')
-    } finally {
       setIsLoading(false)
     }
   }
