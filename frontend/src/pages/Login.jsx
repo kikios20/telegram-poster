@@ -22,10 +22,13 @@ export function Login() {
     setIsLoading(true)
     
     try {
+      console.log('Starting login...')
       await login(email, password)
+      console.log('Login successful, navigating...')
       // Force navigation after state update
       setTimeout(() => navigate('/dashboard'), 100)
     } catch (err) {
+      console.error('Login failed:', err)
       setError(err.response?.data?.detail || 'Ошибка входа')
       setIsLoading(false)
     }

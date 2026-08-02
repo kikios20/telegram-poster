@@ -38,14 +38,18 @@ export const useAuthStore = create(
       isAuthenticated: false,
       
       login: async (email, password) => {
+        console.log('useStore login called')
         const formData = new FormData()
         formData.append('username', email)
         formData.append('password', password)
         
         const response = await api.post('/auth/login', formData)
+        console.log('API response:', response.data)
         const { access_token } = response.data
         
+        console.log('Setting token:', access_token ? 'exists' : 'null')
         set({ token: access_token, isAuthenticated: true })
+        console.log('State after set:', useAuthStore.getState())
         
         // Fetch user info
         await get().fetchUser()
