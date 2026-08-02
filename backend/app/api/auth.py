@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 import asyncio
+import bcrypt
 
 from ..core.config import settings
 from ..core.database import get_db
@@ -14,17 +14,15 @@ from ..models.database import User, TelegramSession, generate_api_key
 from .schemas import UserCreate, UserLogin, Token, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 
 def verify_password_sync(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
 def get_password_hash_sync(password: str) -> str:
-    return pwd_context.hash(password[:72])
+    return bcrypt.hashpw(password[:72].encode(), bcrypt.gensalt()).decode()
 
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
