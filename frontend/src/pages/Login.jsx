@@ -23,8 +23,7 @@ export function Login() {
     
     try {
       await login(email, password)
-      // Force navigation after state update
-      setTimeout(() => navigate('/dashboard', { replace: true }), 100)
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Ошибка входа')
       setIsLoading(false)
