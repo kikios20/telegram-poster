@@ -17,7 +17,7 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleEmailLogin = async (e) => {
-    if (e && e.preventDefault) e.preventDefault()
+    e.preventDefault()
     setError('')
     setIsLoading(true)
     
@@ -133,11 +133,9 @@ export function Login() {
 
           {/* Email form */}
           {mode === 'email' && (
-            <motion.form
+            <form
               key="email-form"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              onSubmit={(e) => { e.preventDefault(); handleEmailLogin(e); }}
+              onSubmit={handleEmailLogin}
               className="space-y-4"
             >
               <div>
@@ -195,18 +193,18 @@ export function Login() {
                   Зарегистрироваться
                 </Link>
               </p>
-            </motion.form>
+            </form>
           )}
 
           {/* API Key form */}
           {mode === 'apikey' && (
-            <motion.form
+            <motion.div
               key="apikey-form"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              onSubmit={handleApiKeyLogin}
               className="space-y-4"
             >
+              <form onSubmit={handleApiKeyLogin} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">
                   Ключ доступа
@@ -243,7 +241,8 @@ export function Login() {
                   </>
                 )}
               </motion.button>
-            </motion.form>
+              </form>
+              </motion.div>
           )}
         </div>
 
