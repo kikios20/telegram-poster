@@ -6,6 +6,7 @@ import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
+import { TestAuth } from './pages/TestAuth'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, token } = useAuthStore()
@@ -18,11 +19,17 @@ function ProtectedRoute({ children }) {
   return children
 }
 
+// Temporary test route - no protection
+function TestRoute({ children }) {
+  return children
+}
+
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/test-auth" element={<TestRoute><TestAuth /></TestRoute>} />
       
       <Route
         path="/"
