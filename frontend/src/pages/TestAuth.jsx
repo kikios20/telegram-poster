@@ -12,23 +12,33 @@ export function TestAuth() {
   useEffect(() => {
     if (!isAuthenticated && !token) {
       console.log('Auto login...')
+      const formData = new URLSearchParams()
+      formData.append('username', 'testagent999@test.com')
+      formData.append('password', 'testpass456')
+      
       fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'username=testagent999@test.com&password=testpass456',
+        body: formData.toString(),
       })
         .then(r => r.json())
         .then(data => {
           console.log('Login response:', data)
           if (data.access_token) {
+            // Update store
             useAuthStore.setState({ 
               token: data.access_token, 
               isAuthenticated: true, 
               user: null 
             })
-            navigate('/dashboard')
+            console.log('Store updated, checking localStorage:', localStorage.getItem('kikio-auth'))
+            // Wait for persist to sync, then navigate
+            setTimeout(() => {
+              console.log('After timeout, localStorage:', localStorage.getItem('kikio-auth'))
+              navigate('/dashboard')
+            }, 500)
           }
         })
         .catch(err => {
