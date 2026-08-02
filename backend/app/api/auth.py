@@ -93,13 +93,12 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.commit()
-    await db.refresh(user)
     
     return UserResponse(
         id=user.id,
         email=user.email,
         is_premium=user.is_premium,
-        has_telegram=len(user.telegram_sessions) > 0 if user.telegram_sessions else False,
+        has_telegram=False,
         created_at=user.created_at
     )
 
@@ -150,12 +149,11 @@ async def get_me(
     current_user: User = Depends(get_current_user)
 ):
     """Get current user info"""
-    has_telegram = len(current_user.telegram_sessions) > 0 if current_user.telegram_sessions else False
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         is_premium=current_user.is_premium,
-        has_telegram=has_telegram,
+        has_telegram=False,
         created_at=current_user.created_at
     )
 
