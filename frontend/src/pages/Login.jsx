@@ -22,13 +22,9 @@ export function Login() {
     setIsLoading(true)
     
     try {
-      console.log('handleEmailLogin called')
       await login(email, password)
-      console.log('Login completed, navigating...')
-      // Navigate immediately after login succeeds
-      window.location.href = '/dashboard'
+      navigate('/dashboard', { replace: true })
     } catch (err) {
-      console.error('Login error:', err)
       setError(err.response?.data?.detail || err.message || 'Ошибка входа')
       setIsLoading(false)
     }
@@ -180,10 +176,7 @@ export function Login() {
 
               <motion.button
                 type="button"
-                onClick={() => {
-                  console.log('Button clicked!');
-                  handleEmailLogin({ preventDefault: () => {} });
-                }}
+                onClick={() => handleEmailLogin({ preventDefault: () => {} })}
                 disabled={isLoading}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
                 whileHover={{ scale: 1.02 }}
