@@ -4,6 +4,7 @@ from sqlalchemy import select
 from datetime import datetime
 from typing import List
 
+from ..core import get_db
 from ..models.database import Campaign, SendLog, User
 from ..services.telegram_service import TelegramService
 from ..core.config import settings
@@ -14,6 +15,7 @@ from .schemas import (
     CampaignStatus,
     CampaignControl
 )
+from .auth import get_current_user
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
@@ -21,13 +23,10 @@ router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 @router.post("/", response_model=CampaignResponse)
 async def create_campaign(
     data: CampaignCreate,
-    db: AsyncSession = Depends(lambda: None),
-    current_user: User = Depends(lambda: None)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Создание новой рассылки"""
-    if db is None or current_user is None:
-        raise HTTPException(status_code=500, detail="Not configured")
-    
     # Валидация данных
     if data.mode == "single" and len(data.messages) != 1:
         raise HTTPException(status_code=400, detail="Single mode requires exactly 1 message")
@@ -62,14 +61,11 @@ async def create_campaign(
 
 @router.get("/", response_model=CampaignList)
 async def list_campaigns(
-    db: AsyncSession = Depends(lambda: None),
-    current_user: User = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     limit: int = 50
 ):
     """Получение списка рассылок"""
-    if db is None or current_user is None:
-        raise HTTPException(status_code=500, detail="Not configured")
-    
     stmt = select(Campaign).where(
         Campaign.user_id == current_user.id
     ).order_by(Campaign.created_at.desc()).limit(limit)
@@ -102,13 +98,10 @@ async def list_campaigns(
 @router.get("/{campaign_id}", response_model=CampaignStatus)
 async def get_campaign(
     campaign_id: int,
-    db: AsyncSession = Depends(lambda: None),
-    current_user: User = Depends(lambda: None)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Получение статуса рассылки"""
-    if db is None or current_user is None:
-        raise HTTPException(status_code=500, detail="Not configured")
-    
     stmt = select(Campaign).where(
         Campaign.id == campaign_id,
         Campaign.user_id == current_user.id
@@ -153,13 +146,10 @@ async def get_campaign(
 async def start_campaign(
     campaign_id: int,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(lambda: None),
-    current_user: User = Depends(lambda: None)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Запуск рассылки"""
-    if db is None or current_user is None:
-        raise HTTPException(status_code=500, detail="Not configured")
-    
     stmt = select(Campaign).where(
         Campaign.id == campaign_id,
         Campaign.user_id == current_user.id
@@ -176,24 +166,16 @@ async def start_campaign(
     campaign.status = "running"
     await db.commit()
     
-    # Запускаем рассылку в фоне
-    # TODO: Использовать Celery для production
-    # Для прототипа - простой background task
-    # background_tasks.add_task(run_campaign, campaign_id, db)
-    
     return {"status": "started", "campaign_id": campaign_id}
 
 
 @router.post("/control")
 async def control_campaign(
     data: CampaignControl,
-    db: AsyncSession = Depends(lambda: None),
-    current_user: User = Depends(lambda: None)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Управление рассылкой (pause/resume/stop)"""
-    if db is None or current_user is None:
-        raise HTTPException(status_code=500, detail="Not configured")
-    
     stmt = select(Campaign).where(
         Campaign.id == data.campaign_id,
         Campaign.user_id == current_user.id
@@ -225,13 +207,10 @@ async def control_campaign(
 @router.delete("/{campaign_id}")
 async def delete_campaign(
     campaign_id: int,
-    db: AsyncSession = Depends(lambda: None),
-    current_user: User = Depends(lambda: None)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Удаление рассылки"""
-    if db is None or current_user is None:
-        raise HTTPException(status_code=500, detail="Not configured")
-    
     stmt = select(Campaign).where(
         Campaign.id == campaign_id,
         Campaign.user_id == current_user.id

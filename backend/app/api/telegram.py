@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict
 import asyncio
 
+from ..core import get_db
 from ..services.telegram_service import TelegramService
 from ..models.database import User
 from .schemas import (
@@ -24,13 +25,10 @@ _pending_clients: Dict[str, Dict] = {}
 @router.post("/connect")
 async def connect_telegram(
     data: TelegramConnect,
-    db: AsyncSession = Depends(lambda: None),  # Placeholder
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Начало подключения Telegram аккаунта"""
-    if db is None:
-        raise HTTPException(status_code=500, detail="Database not configured")
-    
     service = TelegramService(db)
     
     try:
@@ -66,7 +64,7 @@ async def connect_telegram(
 @router.post("/verify-code")
 async def verify_code(
     data: TelegramCodeVerify,
-    db: AsyncSession = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Подтверждение кода из Telegram"""
@@ -104,7 +102,7 @@ async def verify_code(
 @router.post("/verify-2fa")
 async def verify_2fa(
     data: Telegram2FAVerify,
-    db: AsyncSession = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Подтверждение двухфакторной авторизации"""
@@ -135,7 +133,7 @@ async def verify_2fa(
 
 @router.get("/status", response_model=TelegramStatus)
 async def get_status(
-    db: AsyncSession = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Получение статуса подключения Telegram"""
@@ -168,7 +166,7 @@ async def get_status(
 @router.post("/validate-chat", response_model=ChatValidationResult)
 async def validate_chat(
     data: ChatValidation,
-    db: AsyncSession = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Валидация ссылки на чат"""
@@ -196,7 +194,7 @@ async def validate_chat(
 
 @router.post("/logout")
 async def logout(
-    db: AsyncSession = Depends(lambda: None),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Выход из Telegram аккаунта"""
