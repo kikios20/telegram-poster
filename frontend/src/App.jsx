@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './hooks/useStore'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
+import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
@@ -20,6 +21,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       
       <Route
         path="/"

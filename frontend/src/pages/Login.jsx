@@ -3,7 +3,8 @@ import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Logo, LogoText } from '../components/Logo'
 import { useAuthStore } from '../hooks/useStore'
-import { Mail, Lock, Key, ArrowRight, AlertCircle } from 'lucide-react'
+import { api } from '../hooks/useStore'
+import { Mail, Lock, Key, ArrowRight, AlertCircle, User } from 'lucide-react'
 
 export function Login() {
   const navigate = useNavigate()
@@ -190,6 +191,13 @@ export function Login() {
                   </>
                 )}
               </motion.button>
+
+              <p className="text-center text-gray-400 text-sm mt-4">
+                Нет аккаунта?{' '}
+                <Link to="/register" className="text-kikio-glow hover:underline">
+                  Зарегистрироваться
+                </Link>
+              </p>
             </motion.form>
           )}
 
