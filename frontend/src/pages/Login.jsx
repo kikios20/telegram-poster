@@ -18,6 +18,7 @@ export function Login() {
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()
+    console.log('handleEmailLogin called', { email, password })
     setError('')
     setIsLoading(true)
     
