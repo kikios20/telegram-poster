@@ -88,7 +88,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/autologin" element={<AutoLogin />} />
+      <Route path="/auto-login" element={<AutoLogin />} />
       <Route path="/test-auth" element={<TestRoute><TestAuth /></TestRoute>} />
       
       <Route
