@@ -96,7 +96,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/auto-login" element={<AutoLogin />} />
-      <Route path="/test-auth" element={<TestRoute><TestAuth /></TestRoute>} />
+      <Route path="/test-auth" element={<TestAuth />} />
       
       <Route
         path="/"
