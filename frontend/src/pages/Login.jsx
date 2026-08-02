@@ -22,13 +22,14 @@ export function Login() {
     setIsLoading(true)
     
     try {
+      console.log('handleEmailLogin called')
       await login(email, password)
+      console.log('Login completed, navigating...')
       // Navigate immediately after login succeeds
-      window.alert('Login success!')
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      window.alert('Login failed: ' + (err.response?.data?.detail || 'Unknown error'))
-      setError(err.response?.data?.detail || 'Ошибка входа')
+      console.error('Login error:', err)
+      setError(err.response?.data?.detail || err.message || 'Ошибка входа')
       setIsLoading(false)
     }
   }
