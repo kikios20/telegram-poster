@@ -244,7 +244,7 @@ export function Login() {
 
         {/* Footer */}
         <p className="text-center text-gray-500 text-sm mt-6">
-          Kikio Telegram Poster © 2024
+          Kikio Telegram Poster © 2026
         </p>
       </motion.div>
     </div>
