@@ -172,11 +172,11 @@ export function Login() {
                 </div>
               </div>
 
-              <a
-                href={`/api/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`}
-                onClick={(e) => {
-                  e.preventDefault()
-                  // Вызываем login напрямую через fetch
+              <button
+                type="button"
+                id="login-btn"
+                disabled={isLoading || !email || !password}
+                onClick={() => {
                   fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
                     method: 'POST',
                     headers: {
@@ -194,9 +194,8 @@ export function Login() {
                         window.location.href = '/dashboard'
                       }
                     })
-                    .catch(err => console.error(err))
                 }}
-                className={`btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6 ${isLoading || !email || !password ? 'pointer-events-none opacity-50' : ''}`}
+                className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
               >
                 {isLoading ? (
                   <div className="spinner" />
@@ -206,7 +205,7 @@ export function Login() {
                     <ArrowRight size={18} />
                   </>
                 )}
-              </a>
+              </button>
 
               <p className="text-center text-gray-400 text-sm mt-4">
                 Нет аккаунта?{' '}
