@@ -23,8 +23,8 @@ export function Login() {
     
     try {
       await login(email, password)
-      // Use window.location for reliable redirect
-      window.location.href = '/dashboard'
+      // Force navigation after state update
+      setTimeout(() => navigate('/dashboard', { replace: true }), 100)
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Ошибка входа')
       setIsLoading(false)
