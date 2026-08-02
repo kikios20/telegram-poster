@@ -1,8 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../hooks/useStore'
-
-const API_URL = 'https://telegram-poster-api.onrender.com/api'
+import { useAuthStore, api } from '../hooks/useStore'
 
 export function TestAuth() {
   const navigate = useNavigate()
@@ -12,29 +10,25 @@ export function TestAuth() {
   useEffect(() => {
     if (!isAuthenticated && !token) {
       console.log('Auto login...')
-      const formData = new URLSearchParams()
-      formData.append('username', 'testagent999@test.com')
-      formData.append('password', 'testpass456')
       
-      fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-      })
-        .then(r => r.json())
+      api.post('/auth/login', 
+        `username=${encodeURIComponent('testagent999@test.com')}&password=${encodeURIComponent('testpass456')}`,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      )
+        .then(r => r.data)
         .then(data => {
           console.log('Login response:', data)
           if (data.access_token) {
-            // Update store
             useAuthStore.setState({ 
               token: data.access_token, 
               isAuthenticated: true, 
               user: null 
             })
             console.log('Store updated, checking localStorage:', localStorage.getItem('kikio-auth'))
-            // Wait for persist to sync, then navigate
             setTimeout(() => {
               console.log('After timeout, localStorage:', localStorage.getItem('kikio-auth'))
               navigate('/dashboard')
