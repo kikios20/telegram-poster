@@ -180,7 +180,10 @@ export function Login() {
 
               <motion.button
                 type="button"
-                onClick={() => handleEmailLogin({ preventDefault: () => {} })}
+                onClick={() => {
+                  console.log('Button clicked!');
+                  handleEmailLogin({ preventDefault: () => {} });
+                }}
                 disabled={isLoading}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
                 whileHover={{ scale: 1.02 }}
