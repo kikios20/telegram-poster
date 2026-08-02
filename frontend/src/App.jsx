@@ -10,12 +10,18 @@ import { TestAuth } from './pages/TestAuth'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, token } = useAuthStore()
-  
-  // If has token, consider authenticated
+  const hasHydrated = useAuthStore.persist.hasHydrated()
+
+  if (!hasHydrated) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="spinner" />
+    </div>
+  }
+
   if (!isAuthenticated && !token) {
     return <Navigate to="/login" replace />
   }
-  
+
   return children
 }
 

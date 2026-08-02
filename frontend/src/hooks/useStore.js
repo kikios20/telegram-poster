@@ -1,30 +1,8 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import axios from 'axios'
 
 const API_URL = 'https://telegram-poster-api.onrender.com/api'
-
-// Storage helpers
-const STORAGE_KEY = 'kikio-auth'
-
-const getStoredAuth = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : { token: null, isAuthenticated: false }
-  } catch {
-    return { token: null, isAuthenticated: false }
-  }
-}
-
-const setStoredAuth = (token, isAuthenticated) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ token, isAuthenticated }))
-}
-
-const clearStoredAuth = () => {
-  localStorage.removeItem(STORAGE_KEY)
-}
-
-// Initialize from storage
-const initialAuth = getStoredAuth()
 
 // Create axios instance with interceptors
 const api = axios.create({
@@ -51,60 +29,53 @@ api.interceptors.response.use(
   }
 )
 
-// Auth Store
-export const useAuthStore = create((set, get) => ({
-  token: initialAuth.token,
-  user: null,
-  isAuthenticated: initialAuth.isAuthenticated,
-  
-  login: async (email, password) => {
-    const response = await api.post('/auth/login', 
-      `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+// Auth Store with persist middleware
+export const useAuthStore = create(
+  persist(
+    (set, get) => ({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+
+      login: async (email, password) => {
+        const response = await api.post('/auth/login',
+          `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+          {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            }
+          }
+        )
+        const { access_token } = response.data
+        set({ token: access_token, isAuthenticated: true })
+        get().fetchUser()
+        return true
+      },
+
+      loginWithApiKey: async (apiKey) => {
+        const response = await api.post('/auth/login/api-key', null, {
+          params: { api_key: apiKey }
+        })
+        const { access_token } = response.data
+        set({ token: access_token, isAuthenticated: true })
+        await get().fetchUser()
+        return true
+      },
+
+      fetchUser: async () => {
+        try {
+          const response = await api.get('/auth/me')
+          set({ user: response.data })
+        } catch (error) {
+          console.error('Failed to fetch user:', error)
         }
-      }
-    )
-    const { access_token } = response.data
-    
-    set({ token: access_token, isAuthenticated: true })
-    setStoredAuth(access_token, true)
-    
-    get().fetchUser()
-    
-    return true
-  },
-  
-  loginWithApiKey: async (apiKey) => {
-    const response = await api.post('/auth/login/api-key', null, {
-      params: { api_key: apiKey }
-    })
-    const { access_token } = response.data
-    
-    set({ token: access_token, isAuthenticated: true })
-    setStoredAuth(access_token, true)
-    
-    // Fetch user info
-    await get().fetchUser()
-    
-    return true
-  },
-  
-  fetchUser: async () => {
-    try {
-      const response = await api.get('/auth/me')
-      set({ user: response.data })
-    } catch (error) {
-      console.error('Failed to fetch user:', error)
-    }
-  },
-  
-  logout: () => {
-    set({ token: null, user: null, isAuthenticated: false })
-    clearStoredAuth()
-  },
-}))
+      },
+
+      logout: () => set({ token: null, user: null, isAuthenticated: false }),
+    }),
+    { name: 'kikio-auth' }
+  )
+)
 
 // Telegram Store
 export const useTelegramStore = create((set, get) => ({
@@ -115,7 +86,7 @@ export const useTelegramStore = create((set, get) => ({
   },
   isConnecting: false,
   error: null,
-  
+
   fetchStatus: async () => {
     try {
       const response = await api.get('/telegram/status')
