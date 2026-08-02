@@ -17,7 +17,7 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleEmailLogin = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
     setError('')
     setIsLoading(true)
     
@@ -26,7 +26,7 @@ export function Login() {
       await login(email, password)
       console.log('Login completed, navigating...')
       // Navigate immediately after login succeeds
-      navigate('/dashboard', { replace: true })
+      window.location.href = '/dashboard'
     } catch (err) {
       console.error('Login error:', err)
       setError(err.response?.data?.detail || err.message || 'Ошибка входа')
