@@ -29,15 +29,35 @@ function ProtectedRoute({ children }) {
 // Route for automatic login via URL params (for testing)
 function AutoLogin() {
   const [searchParams] = useSearchParams()
-  const { login } = useAuthStore()
   
   useEffect(() => {
     const email = searchParams.get('email')
     const password = searchParams.get('password')
     if (email && password) {
-      login(email, password).then(() => {
-        window.location.href = '/dashboard'
+      fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
       })
+        .then(r => r.json())
+        .then(data => {
+          if (data.access_token) {
+            localStorage.setItem('kikio-auth', JSON.stringify({
+              state: { token: data.access_token, isAuthenticated: true, user: null },
+              version: 0
+            }))
+            window.location.href = '/dashboard'
+          } else {
+            window.location.href = '/login'
+          }
+        })
+        .catch(() => {
+          window.location.href = '/login'
+        })
+    } else {
+      window.location.href = '/login'
     }
   }, [])
   
