@@ -175,13 +175,11 @@ export function Login() {
                 </div>
               </div>
 
-              <motion.button
+              <button
                 type="button"
                 onClick={() => handleEmailLogin({ preventDefault: () => {} })}
                 disabled={isLoading}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
               >
                 {isLoading ? (
                   <div className="spinner" />
@@ -191,7 +189,7 @@ export function Login() {
                     <ArrowRight size={18} />
                   </>
                 )}
-              </motion.button>
+              </button>
 
               <p className="text-center text-gray-400 text-sm mt-4">
                 Нет аккаунта?{' '}
