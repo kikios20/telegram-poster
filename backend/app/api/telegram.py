@@ -21,6 +21,9 @@ router = APIRouter(prefix="/telegram", tags=["telegram"])
 # Временно храним клиенты в памяти во время авторизации
 _pending_clients: Dict[str, Dict] = {}
 
+# Защита от повторной обработки (двойной клик)
+_processing_sessions: set = set()
+
 # Максимум попыток ввода кода
 MAX_CODE_ATTEMPTS = 5
 
@@ -71,48 +74,57 @@ async def verify_code(
     current_user: User = Depends(get_current_user)
 ):
     """Подтверждение кода из Telegram"""
-    if data.session_id not in _pending_clients:
-        raise HTTPException(status_code=400, detail="Session not found or expired")
+    # Защита от повторной обработки (двойной клик)
+    if data.session_id in _processing_sessions:
+        raise HTTPException(status_code=409, detail="Request already in progress")
+    _processing_sessions.add(data.session_id)
     
-    client_info = _pending_clients[data.session_id]
-    if client_info["user_id"] != current_user.id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    
-    # Проверка лимита попыток
-    if client_info.get("attempts", 0) >= MAX_CODE_ATTEMPTS:
+    try:
+        if data.session_id not in _pending_clients:
+            raise HTTPException(status_code=400, detail="Session not found or expired")
+        
+        client_info = _pending_clients[data.session_id]
+        if client_info["user_id"] != current_user.id:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        
+        # Проверка лимита попыток
+        if client_info.get("attempts", 0) >= MAX_CODE_ATTEMPTS:
+            del _pending_clients[data.session_id]
+            raise HTTPException(status_code=429, detail="Too many attempts. Please start again with /telegram/connect")
+        
+        # Увеличиваем счётчик попыток
+        client_info["attempts"] += 1
+        
+        client = client_info["client"]
+        service = TelegramService(db)
+        
+        result = await service.verify_code(
+            client, 
+            phone=client_info["phone"],
+            code=data.code,
+            phone_code_hash=client_info["phone_code_hash"]
+        )
+        
+        if not result["success"]:
+            if result.get("needs_2fa"):
+                return {"status": "2fa_required", "session_id": data.session_id}
+            raise HTTPException(status_code=400, detail=result.get("error", "Invalid code"))
+        
+        # Сохраняем сессию
+        await service.save_session(
+            user_id=current_user.id,
+            session_id=data.session_id,
+            client=client,
+            phone=client_info.get("phone", "")
+        )
+        
+        # Удаляем из ожидающих
         del _pending_clients[data.session_id]
-        raise HTTPException(status_code=429, detail="Too many attempts. Please start again with /telegram/connect")
+        
+        return {"status": "connected"}
     
-    # Увеличиваем счётчик попыток
-    client_info["attempts"] += 1
-    
-    client = client_info["client"]
-    service = TelegramService(db)
-    
-    result = await service.verify_code(
-        client, 
-        phone=client_info["phone"],
-        code=data.code,
-        phone_code_hash=client_info["phone_code_hash"]
-    )
-    
-    if not result["success"]:
-        if result.get("needs_2fa"):
-            return {"status": "2fa_required", "session_id": data.session_id}
-        raise HTTPException(status_code=400, detail=result.get("error", "Invalid code"))
-    
-    # Сохраняем сессию
-    await service.save_session(
-        user_id=current_user.id,
-        session_id=data.session_id,
-        client=client,
-        phone=client_info.get("phone", "")
-    )
-    
-    # Удаляем из ожидающих
-    del _pending_clients[data.session_id]
-    
-    return {"status": "connected"}
+    finally:
+        _processing_sessions.discard(data.session_id)
 
 
 @router.post("/verify-2fa")

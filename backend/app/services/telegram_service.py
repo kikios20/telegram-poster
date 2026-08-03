@@ -102,19 +102,34 @@ class TelegramService:
         session_string = await client.export_session_string()
         encrypted = encrypt_session(session_string)
         
-        new_session = TelegramSession(
-            user_id=user_id,
-            session_id=session_id,
-            phone=phone,
-            encrypted_session=encrypted,
-            is_active=True
+        # Проверяем, существует ли уже запись с таким session_id
+        existing_stmt = select(TelegramSession).where(
+            TelegramSession.session_id == session_id
         )
+        existing_result = await self.session.execute(existing_stmt)
+        existing_session = existing_result.scalar_one_or_none()
         
-        self.session.add(new_session)
+        if existing_session:
+            # UPDATE вместо INSERT
+            existing_session.encrypted_session = encrypted
+            existing_session.phone = phone
+            existing_session.is_active = True
+        else:
+            # INSERT новой записи
+            new_session = TelegramSession(
+                user_id=user_id,
+                session_id=session_id,
+                phone=phone,
+                encrypted_session=encrypted,
+                is_active=True
+            )
+            self.session.add(new_session)
+        
         await self.session.commit()
         
         # Отключаем клиент (сессия сохранена)
-        await client.stop()
+        if client.is_connected:
+            await client.stop()
         
         return True
     
