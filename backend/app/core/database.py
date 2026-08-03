@@ -1,15 +1,29 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 from ..models.database import Base
 from .config import settings
 
-# Create engine with SQLite
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-    echo=False,
-)
+# Determine database type from URL
+db_url = settings.DATABASE_URL
+is_sqlite = db_url.startswith("sqlite")
+
+# Create engine with appropriate settings
+if is_sqlite:
+    # SQLite configuration (for local development)
+    engine = create_async_engine(
+        db_url,
+        connect_args={"check_same_thread": False},
+        poolclass=NullPool,
+        echo=False,
+    )
+else:
+    # PostgreSQL configuration (for production on Render)
+    engine = create_async_engine(
+        db_url,
+        poolclass=NullPool,
+        echo=False,
+        pool_pre_ping=True,
+    )
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
