@@ -36,6 +36,7 @@ export function Dashboard() {
   const [isValidating, setIsValidating] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [showLimits, setShowLimits] = useState(false)
+  const [riskAccepted, setRiskAccepted] = useState(false)
 
   useEffect(() => {
     fetchStatus()
@@ -430,22 +431,33 @@ export function Dashboard() {
           </div>
 
           {/* Warning */}
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-            <AlertTriangle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+            <AlertTriangle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="text-yellow-400 font-medium mb-1">Внимание</p>
-              <p className="text-gray-400">
-                При частых рассылках Telegram может ограничить ваш аккаунт. 
-                Рекомендуем использовать интервал 15-30 секунд.
+              <p className="text-red-400 font-medium mb-1">⚠️ Риск блокировки Telegram</p>
+              <p className="text-gray-400 mb-3">
+                Рассылка в разные чаты может привести к ограничению или полной блокировке вашего Telegram-аккаунта. 
+                Сервис не несёт ответственности за возможные последствия.
               </p>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={riskAccepted}
+                  onChange={(e) => setRiskAccepted(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-gray-600 bg-black/50 text-kikio-glow focus:ring-kikio-glow focus:ring-offset-0"
+                />
+                <span className="text-gray-300 text-xs">
+                  Я понимаю риски и согласен с условиями использования
+                </span>
+              </label>
             </div>
           </div>
 
           {/* Start button */}
           <motion.button
             onClick={handleCreateAndStart}
-            disabled={isCreating || !validatedChats.length}
-            className="btn btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 disabled:opacity-50"
+            disabled={isCreating || !validatedChats.length || !riskAccepted}
+            className="btn btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -456,6 +468,12 @@ export function Dashboard() {
             )}
             <span>Запустить рассылку</span>
           </motion.button>
+          
+          {!riskAccepted && validatedChats.length > 0 && (
+            <p className="text-center text-xs text-gray-500 mt-2">
+              Подтвердите согласие с рисками для запуска рассылки
+            </p>
+          )}
         </div>
       </div>
     </div>

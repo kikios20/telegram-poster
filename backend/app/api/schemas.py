@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     email: str
     is_premium: bool
     has_telegram: bool
+    tier: str
     created_at: datetime
 
 
@@ -72,6 +73,7 @@ class CampaignCreate(BaseModel):
     messages: List[str] = Field(min_length=1)
     chat_links: List[str] = Field(min_length=1, max_length=100)
     delay_seconds: int = Field(ge=7, le=3600)
+    jitter_seconds: Optional[int] = Field(default=None, ge=0, le=30)
     send_mode: str = Field(pattern="^(all_at_once|sequential)$")
 
 

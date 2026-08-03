@@ -52,8 +52,11 @@ class Campaign(Base):
     messages = Column(JSON)  # Список сообщений
     chat_links = Column(JSON)  # Список ссылок на чаты
     delay_seconds = Column(Integer, default=10)
+    jitter_seconds = Column(Integer, default=2)  # Разброс задержки
     send_mode = Column(String(20))  # "all_at_once" или "sequential"
     status = Column(String(20), default="pending")  # pending, running, paused, completed, stopped
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

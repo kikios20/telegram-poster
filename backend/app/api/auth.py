@@ -99,6 +99,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         email=user.email,
         is_premium=user.is_premium,
         has_telegram=False,
+        tier=user.tier or "free",
         created_at=user.created_at
     )
 
@@ -149,11 +150,20 @@ async def get_me(
     current_user: User = Depends(get_current_user)
 ):
     """Get current user info"""
+    # Check if user has Telegram session
+    stmt = select(TelegramSession).where(
+        TelegramSession.user_id == current_user.id,
+        TelegramSession.is_active == True
+    )
+    result = await db.execute(stmt)
+    has_telegram = result.scalar_one_or_none() is not None
+    
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         is_premium=current_user.is_premium,
-        has_telegram=False,
+        has_telegram=has_telegram,
+        tier=current_user.tier or "free",
         created_at=current_user.created_at
     )
 
