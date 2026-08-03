@@ -213,28 +213,9 @@ export function Login() {
               </div>
 
               <button
-                type="button"
+                type="submit"
                 id="login-btn"
                 disabled={isLoading || !email || !password}
-                onClick={() => {
-                  fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-                  })
-                    .then(r => r.json())
-                    .then(data => {
-                      if (data.access_token) {
-                        localStorage.setItem('kikio-auth', JSON.stringify({
-                          state: { token: data.access_token, isAuthenticated: true },
-                          version: 0
-                        }))
-                        window.location.href = '/dashboard'
-                      }
-                    })
-                }}
                 className="btn btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6"
               >
                 {isLoading ? (
