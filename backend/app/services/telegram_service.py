@@ -128,8 +128,10 @@ class TelegramService:
         await self.session.commit()
         
         # Отключаем клиент (сессия сохранена)
-        if client.is_connected:
+        try:
             await client.stop()
+        except ConnectionError:
+            pass
         
         return True
     
