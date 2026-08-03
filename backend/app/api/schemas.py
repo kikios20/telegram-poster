@@ -24,7 +24,7 @@ class UserResponse(BaseModel):
     email: str
     is_premium: bool
     has_telegram: bool
-    tier: str
+    tier: Optional[str] = "free"
     created_at: datetime
 
 
