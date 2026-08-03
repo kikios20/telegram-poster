@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Logo, LogoText } from '../components/Logo'
@@ -15,6 +15,24 @@ export function Login() {
   const [apiKey, setApiKey] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [serverStatus, setServerStatus] = useState('checking') // 'checking', 'ready', 'error'
+
+  // Check backend status
+  useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const response = await fetch('https://telegram-poster-api.onrender.com/api/auth/login', {
+          method: 'HEAD'
+        })
+        setServerStatus('ready')
+      } catch {
+        setServerStatus('error')
+        // Retry after 3 seconds
+        setTimeout(checkServer, 3000)
+      }
+    }
+    checkServer()
+  }, [])
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()
@@ -78,6 +96,28 @@ export function Login() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md relative z-10"
       >
+        {/* Server Status Indicator */}
+        <div className="absolute top-0 right-0 flex items-center gap-2 text-sm">
+          {serverStatus === 'checking' && (
+            <span className="flex items-center gap-1.5 text-yellow-400">
+              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+              Сервер запускается...
+            </span>
+          )}
+          {serverStatus === 'error' && (
+            <span className="flex items-center gap-1.5 text-red-400">
+              <span className="w-2 h-2 rounded-full bg-red-400" />
+              Сервер недоступен
+            </span>
+          )}
+          {serverStatus === 'ready' && (
+            <span className="flex items-center gap-1.5 text-green-400">
+              <span className="w-2 h-2 rounded-full bg-green-400" />
+              Сервер готов
+            </span>
+          )}
+        </div>
+
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <LogoText />
