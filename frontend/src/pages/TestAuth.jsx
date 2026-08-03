@@ -24,8 +24,8 @@ export function TestAuth() {
       
       log += '5. LOCALSTORAGE: ' + localStorage.getItem('kikio-auth') + '\n\n'
       
-      log += '6. NAVIGATING TO /dashboard...'
-      navigate('/dashboard')
+      log += '6. DONE - navigate commented out for debug'
+      // navigate('/dashboard')
     } catch (err) {
       log += 'ERROR: ' + err.message + '\n' + JSON.stringify(err.response?.data)
     }
