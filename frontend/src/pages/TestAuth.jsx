@@ -11,7 +11,7 @@ export function TestAuth() {
     try {
       log += '1. CALLING API...\n\n'
       const response = await api.post('/auth/login',
-        `username=${encodeURIComponent('test1234@test.com')}&password=${encodeURIComponent('qwertyuiop')}`,
+        `username=${encodeURIComponent('testnew@test.com')}&password=${encodeURIComponent('testpass123')}`,
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       )
       log += '2. RAW RESPONSE: ' + JSON.stringify(response.data) + '\n\n'
@@ -24,8 +24,8 @@ export function TestAuth() {
       
       log += '5. LOCALSTORAGE: ' + localStorage.getItem('kikio-auth') + '\n\n'
       
-      log += '6. DONE - navigate commented out for debug'
-      // navigate('/dashboard')
+      log += '6. NAVIGATING TO /dashboard'
+      navigate('/dashboard')
     } catch (err) {
       log += 'ERROR: ' + err.message + '\n' + JSON.stringify(err.response?.data)
     }
