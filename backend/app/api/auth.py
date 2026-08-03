@@ -70,7 +70,7 @@ async def get_current_user(
     return user
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register")
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user"""
     # Check if email exists
@@ -94,14 +94,14 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.commit()
     
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        is_premium=user.is_premium,
-        has_telegram=False,
-        tier=user.tier or "free",
-        created_at=user.created_at
-    )
+    return {
+        "id": user.id,
+        "email": user.email,
+        "is_premium": user.is_premium,
+        "has_telegram": False,
+        "tier": user.tier or "free",
+        "created_at": user.created_at.isoformat() if user.created_at else None
+    }
 
 
 @router.post("/login", response_model=Token)
@@ -144,7 +144,7 @@ async def login_with_api_key(api_key: str, db: AsyncSession = Depends(get_db)):
     return Token(access_token=access_token)
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me")
 async def get_me(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -158,14 +158,14 @@ async def get_me(
     result = await db.execute(stmt)
     has_telegram = result.scalar_one_or_none() is not None
     
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        is_premium=current_user.is_premium,
-        has_telegram=has_telegram,
-        tier=current_user.tier or "free",
-        created_at=current_user.created_at
-    )
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "is_premium": current_user.is_premium,
+        "has_telegram": has_telegram,
+        "tier": current_user.tier or "free",
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+    }
 
 
 @router.get("/api-key")
