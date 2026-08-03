@@ -17,6 +17,8 @@ class User(Base):
     api_key = Column(String(64), unique=True, index=True)
     is_active = Column(Boolean, default=True)
     is_premium = Column(Boolean, default=False)
+    tier = Column(String(20), default="free")  # free, basic, vip
+    tier_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
