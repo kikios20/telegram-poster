@@ -11,7 +11,7 @@ export function TestAuth() {
     try {
       log += '1. CALLING API...\n\n'
       const response = await api.post('/auth/login',
-        `username=${encodeURIComponent('testagent999@test.com')}&password=${encodeURIComponent('testpass456')}`,
+        `username=${encodeURIComponent('test1234@test.com')}&password=${encodeURIComponent('qwertyuiop')}`,
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       )
       log += '2. RAW RESPONSE: ' + JSON.stringify(response.data) + '\n\n'
