@@ -7,6 +7,7 @@ import { Register } from './pages/Register'
 import { Dashboard } from './pages/Dashboard'
 import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
+import { ProfilePage } from './pages/Profile'
 import { TestAuth } from './pages/TestAuth'
 
 function ProtectedRoute({ children }) {
@@ -110,6 +111,7 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/login" replace />} />

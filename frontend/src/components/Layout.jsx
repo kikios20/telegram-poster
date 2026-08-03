@@ -11,7 +11,8 @@ import {
   X,
   User,
   CheckCircle,
-  XCircle
+  XCircle,
+  UserCircle
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -25,6 +26,7 @@ export function Layout() {
     { path: '/dashboard', label: 'Рассылка', icon: Send },
     { path: '/history', label: 'История', icon: History },
     { path: '/settings', label: 'Настройки', icon: Settings },
+    { path: '/profile', label: 'Профиль', icon: UserCircle },
   ]
 
   const isActive = (path) => location.pathname === path
