@@ -45,14 +45,13 @@ async def connect_telegram(
         client = result["client"]
         session_id = result["session_id"]
         
-        # Запускаем клиент для получения кода
-        await client.start(phone_number=data.phone)
-        
         # Сохраняем клиент временно
         _pending_clients[session_id] = {
             "client": client,
             "user_id": current_user.id,
-            "attempts": 0  # Счётчик попыток ввода кода
+            "phone": data.phone,
+            "phone_code_hash": result["phone_code_hash"],
+            "attempts": 0
         }
         
         return {
@@ -90,7 +89,12 @@ async def verify_code(
     client = client_info["client"]
     service = TelegramService(db)
     
-    result = await service.verify_code(client, data.code)
+    result = await service.verify_code(
+        client, 
+        phone=client_info["phone"],
+        code=data.code,
+        phone_code_hash=client_info["phone_code_hash"]
+    )
     
     if not result["success"]:
         if result.get("needs_2fa"):

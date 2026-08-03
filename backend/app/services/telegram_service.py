@@ -51,20 +51,24 @@ class TelegramService:
             session_name,
             api_id=api_id,
             api_hash=api_hash,
-            phone_number=phone,
             workdir="./sessions/"
         )
+        
+        await client.connect()
+        sent_code = await client.send_code(phone)
+        phone_code_hash = sent_code.phone_code_hash
         
         return {
             "client": client,
             "session_id": session_id,
-            "phone": phone
+            "phone": phone,
+            "phone_code_hash": phone_code_hash
         }
     
-    async def verify_code(self, client: Client, code: str) -> dict:
+    async def verify_code(self, client: Client, phone: str, code: str, phone_code_hash: str) -> dict:
         """Подтверждение кода"""
         try:
-            await client.sign_in(code=code)
+            await client.sign_in(phone_number=phone, phone_code_hash=phone_code_hash, phone_code=code)
             return {"success": True}
         except SessionPasswordNeeded:
             return {"success": False, "needs_2fa": True}
@@ -74,7 +78,7 @@ class TelegramService:
     async def verify_2fa(self, client: Client, password: str) -> dict:
         """Подтверждение двухфакторной авторизации"""
         try:
-            await client.sign_in(password=password)
+            await client.check_password(password)
             return {"success": True}
         except PasswordHashInvalid:
             return {"success": False, "error": "Invalid password"}
