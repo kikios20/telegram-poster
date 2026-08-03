@@ -21,6 +21,9 @@ router = APIRouter(prefix="/telegram", tags=["telegram"])
 # Временно храним клиенты в памяти во время авторизации
 _pending_clients: Dict[str, Dict] = {}
 
+# Максимум попыток ввода кода
+MAX_CODE_ATTEMPTS = 5
+
 
 @router.post("/connect")
 async def connect_telegram(
@@ -48,7 +51,8 @@ async def connect_telegram(
         # Сохраняем клиент временно
         _pending_clients[session_id] = {
             "client": client,
-            "user_id": current_user.id
+            "user_id": current_user.id,
+            "attempts": 0  # Счётчик попыток ввода кода
         }
         
         return {
@@ -74,6 +78,14 @@ async def verify_code(
     client_info = _pending_clients[data.session_id]
     if client_info["user_id"] != current_user.id:
         raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # Проверка лимита попыток
+    if client_info.get("attempts", 0) >= MAX_CODE_ATTEMPTS:
+        del _pending_clients[data.session_id]
+        raise HTTPException(status_code=429, detail="Too many attempts. Please start again with /telegram/connect")
+    
+    # Увеличиваем счётчик попыток
+    client_info["attempts"] += 1
     
     client = client_info["client"]
     service = TelegramService(db)
@@ -110,6 +122,15 @@ async def verify_2fa(
         raise HTTPException(status_code=400, detail="Session not found or expired")
     
     client_info = _pending_clients[data.session_id]
+    
+    # Проверка лимита попыток
+    if client_info.get("attempts", 0) >= MAX_CODE_ATTEMPTS:
+        del _pending_clients[data.session_id]
+        raise HTTPException(status_code=429, detail="Too many attempts. Please start again with /telegram/connect")
+    
+    # Увеличиваем счётчик попыток
+    client_info["attempts"] += 1
+    
     client = client_info["client"]
     service = TelegramService(db)
     
