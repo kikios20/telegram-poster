@@ -152,22 +152,27 @@ class TelegramService:
         
         # Проверяем кеш
         if session.session_id in self._clients:
-            return self._clients[session.session_id]
+            client = self._clients[session.session_id]
+            if not client.is_connected:
+                await client.start()
+            return client
         
-        # Расшифровываем и создаём клиент
+        # Расшифровываем и создаём клиент с правильным импортом сессии
         session_string = decrypt_session(session.encrypted_session)
         session_name = f"session_{session.session_id}"
         
-        client = Client(session_name, workdir="./sessions/")
-        
-        # Импортируем сессию
-        import_temp = Client(
-            "import_session",
+        # Создаём клиент с session_string для автоматической загрузки сессии
+        client = Client(
+            session_name,
             session_string=session_string,
-            workdir="./sessions/"
+            workdir="./sessions/",
+            no_updates=True
         )
-        await import_temp.start()
-        await import_temp.stop()
+        
+        try:
+            await client.start()
+        except Exception as e:
+            raise ValueError(f"Failed to connect Telegram session: {e}")
         
         self._clients[session.session_id] = client
         
@@ -184,31 +189,49 @@ class TelegramService:
     
     async def validate_chat(self, user_id: int, chat_link: str) -> dict:
         """Валидация чата и получение информации"""
-        client = await self.get_client_for_user(user_id)
-        if not client.is_connected:
-            await client.start()
+        try:
+            client = await self.get_client_for_user(user_id)
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": f"Telegram не подключен: {str(e)}"
+            }
         
         try:
             # Убираем https://t.me/ если есть
-            chat_id = chat_link.replace("https://t.me/", "").replace("t.me/", "").replace("@", "")
+            chat_id = chat_link.strip().replace("https://t.me/", "").replace("t.me/", "").replace("@", "")
             
-            if chat_id.isdigit():
+            if not chat_id:
+                return {"valid": False, "error": "Пустая ссылка"}
+            
+            if chat_id.isdigit() or chat_id.startswith("-"):
                 chat = await client.get_chat(int(chat_id))
             else:
                 chat = await client.get_chat(chat_id)
             
+            # Получаем title - для личных чатов это может быть имя
+            title = getattr(chat, 'title', None) or getattr(chat, 'first_name', 'Telegram User')
+            
             return {
                 "valid": True,
                 "chat_id": str(chat.id),
-                "title": chat.title,
+                "title": title,
                 "username": getattr(chat, 'username', None)
             }
         except Exception as e:
-            return {
-                "valid": False,
-                "error": str(e)
-            }
-    
+            error_msg = str(e)
+            # Упрощаем сообщения об ошибках для пользователя
+            if "UsernameNotOccupied" in error_msg or "username not found" in error_msg.lower():
+                return {"valid": False, "error": "Чат не найден (неверное имя)"}
+            elif "PeerIdInvalid" in error_msg or "invalid peer id" in error_msg.lower():
+                return {"valid": False, "error": "Неверный ID чата"}
+            elif "UserNotParticipant" in error_msg:
+                return {"valid": False, "error": "Нет доступа к чату"}
+            elif "ChatWriteForbidden" in error_msg or "write access denied" in error_msg.lower():
+                return {"valid": False, "error": "Нет прав на отправку сообщений"}
+            else:
+                return {"valid": False, "error": f"Ошибка: {error_msg[:50]}"}
+
     async def logout(self, user_id: int) -> bool:
         """Выход из аккаунта"""
         session = await self.get_active_session(user_id)
