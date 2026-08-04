@@ -42,6 +42,7 @@ export function Dashboard() {
   const tier = user?.tier || 'free'
   const jitterMax = tier === 'vip' ? 30 : tier === 'basic' ? 10 : 2
   const jitterFixed = tier === 'free'
+  const maxDelaySeconds = tier === 'free' ? 60 : 1800  // Free: 60, Basic/VIP: 1800
 
   useEffect(() => {
     fetchStatus()
@@ -110,16 +111,29 @@ export function Dashboard() {
     setIsValidating(true)
     const validLinks = chatLinks.filter(l => l.trim())
     
-    // TODO: Implement actual validation via API
-    // For now, simulate validation
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Validate each chat via API
+    const validationResults = await Promise.all(
+      validLinks.map(async (link) => {
+        try {
+          const result = await useTelegramStore.getState().validateChat(link)
+          return {
+            link,
+            valid: result.valid,
+            title: result.title || link.replace('https://t.me/', '').replace('@', ''),
+            error: result.error
+          }
+        } catch (err) {
+          return {
+            link,
+            valid: false,
+            title: link.replace('https://t.me/', '').replace('@', ''),
+            error: 'Ошибка проверки'
+          }
+        }
+      })
+    )
     
-    setValidatedChats(validLinks.map(link => ({
-      link,
-      valid: true,
-      title: link.replace('https://t.me/', '').replace('@', '')
-    })))
-    
+    setValidatedChats(validationResults)
     setIsValidating(false)
   }
 
@@ -451,14 +465,14 @@ export function Dashboard() {
                   <input
                     type="number"
                     min="7"
-                    max="1800"
+                    max={maxDelaySeconds}
                     value={delaySeconds}
-                    onChange={(e) => setDelaySeconds(Math.max(7, Math.min(1800, Number(e.target.value))))}
+                    onChange={(e) => setDelaySeconds(Math.max(7, Math.min(maxDelaySeconds, Number(e.target.value))))}
                     className="w-full px-4 py-2.5 rounded-lg bg-black/50 border border-white/10 focus:border-kikio-glow text-sm"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>7 сек (быстро)</span>
-                    <span>1800 сек (макс)</span>
+                    <span>{maxDelaySeconds} сек (макс для {tier})</span>
                   </div>
                 </div>
               )}

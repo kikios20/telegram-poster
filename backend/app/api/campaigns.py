@@ -243,7 +243,7 @@ async def stop_campaign_endpoint(
         raise HTTPException(status_code=400, detail="Campaign is not running")
     
     # Stop the campaign
-    stop_campaign(campaign_id)
+    await stop_campaign(campaign_id)
     campaign.status = "stopped"
     await db.commit()
     
@@ -279,7 +279,7 @@ async def control_campaign(
         if campaign.status not in ["running", "paused"]:
             raise HTTPException(status_code=400, detail="Campaign cannot be stopped")
         campaign.status = "stopped"
-        stop_campaign(data.campaign_id)
+        await stop_campaign(data.campaign_id)
     
     await db.commit()
     
