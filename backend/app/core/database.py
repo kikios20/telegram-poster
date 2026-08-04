@@ -24,10 +24,12 @@ if is_sqlite:
     )
 else:
     # PostgreSQL configuration (for production on Render)
-    # Convert postgres:// to postgresql+asyncpg://
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-        logger.info(f"Converted to asyncpg URL: {db_url}")
+    # Convert postgres:// or postgresql:// to postgresql+asyncpg://
+    if "://" in db_url:
+        prefix = db_url.split("://")[0]
+        if prefix in ("postgres", "postgresql"):
+            db_url = "postgresql+asyncpg://" + db_url.split("://", 1)[1]
+            logger.info(f"Converted to asyncpg URL: {db_url}")
     
     engine = create_async_engine(
         db_url,
