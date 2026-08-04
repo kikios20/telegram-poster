@@ -166,10 +166,11 @@ async def send_campaign(
     campaign: Campaign,
     user: User,
 ):
-    """Main campaign sending logic"""
+    """Main campaign sending logic - runs in a loop until stopped"""
     campaign_id = campaign.id
     user_id = user.id
     tier = user.tier or "free"
+    iteration = 0
     
     # Mark campaign as running
     _running_campaigns[campaign_id] = "running"
@@ -191,37 +192,47 @@ async def send_campaign(
         jitter = campaign.jitter_seconds or get_jitter_for_tier(tier)
         send_mode = campaign.send_mode or "sequential"
         
-        if send_mode == "all_at_once":
-            # Send to all chats simultaneously
-            tasks = []
-            for chat_link in chat_links:
-                if _running_campaigns.get(campaign_id) == "stopped":
-                    break
-                task = send_to_chat(client, campaign_id, user_id, chat_link, messages, 
-                                    base_delay, jitter, db)
-                tasks.append(task)
+        # Main loop - continues until stopped
+        while _running_campaigns.get(campaign_id) != "stopped":
+            iteration += 1
+            print(f"Campaign {campaign_id}: Starting iteration {iteration}")
             
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-        else:
-            # Sequential sending
-            for i, chat_link in enumerate(chat_links):
-                if _running_campaigns.get(campaign_id) == "stopped":
-                    break
+            if send_mode == "all_at_once":
+                # Send to all chats simultaneously
+                tasks = []
+                for chat_link in chat_links:
+                    if _running_campaigns.get(campaign_id) == "stopped":
+                        break
+                    task = send_to_chat(client, campaign_id, user_id, chat_link, messages, 
+                                        base_delay, jitter, db)
+                    tasks.append(task)
                 
-                await send_to_chat(client, campaign_id, user_id, chat_link, messages,
-                                 base_delay, jitter, db)
-                
-                # Delay between chats (except for the last one)
-                if i < len(chat_links) - 1:
-                    delay = await calculate_delay(base_delay, jitter)
-                    await asyncio.sleep(delay)
+                if tasks:
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+            else:
+                # Sequential sending
+                for i, chat_link in enumerate(chat_links):
+                    if _running_campaigns.get(campaign_id) == "stopped":
+                        break
+                    
+                    await send_to_chat(client, campaign_id, user_id, chat_link, messages,
+                                     base_delay, jitter, db)
+                    
+                    # Delay between chats (except for the last one)
+                    if i < len(chat_links) - 1:
+                        delay = await calculate_delay(base_delay, jitter)
+                        await asyncio.sleep(delay)
+            
+            # Check if stopped before waiting for next iteration
+            if _running_campaigns.get(campaign_id) == "stopped":
+                break
+            
+            # Wait for next iteration - delay between full cycles
+            print(f"Campaign {campaign_id}: Completed iteration {iteration}, waiting {base_delay} seconds for next cycle")
+            await asyncio.sleep(base_delay)
         
-        # Mark as completed if not stopped
-        if _running_campaigns.get(campaign_id) != "stopped":
-            campaign.status = "completed"
-            campaign.completed_at = datetime.utcnow()
-        else:
-            campaign.status = "stopped"
+        # Campaign was stopped
+        campaign.status = "stopped"
         await db.commit()
         
     except Exception as e:

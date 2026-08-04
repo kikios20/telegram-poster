@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTelegramStore, useAuthStore } from '../hooks/useStore'
 import { 
@@ -36,7 +36,7 @@ export function SettingsPage() {
   const [password, setPassword] = useState('')
   const [sessionId, setSessionId] = useState('')
 
-  useState(() => {
+  useEffect(() => {
     fetchStatus()
   }, [])
 

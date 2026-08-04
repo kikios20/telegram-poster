@@ -37,6 +37,11 @@ export function Dashboard() {
   const [isCreating, setIsCreating] = useState(false)
   const [showLimits, setShowLimits] = useState(false)
   const [riskAccepted, setRiskAccepted] = useState(false)
+  const [jitterSeconds, setJitterSeconds] = useState(2)
+
+  const tier = user?.tier || 'free'
+  const jitterMax = tier === 'vip' ? 30 : tier === 'basic' ? 10 : 2
+  const jitterFixed = tier === 'free'
 
   useEffect(() => {
     fetchStatus()
@@ -146,6 +151,7 @@ export function Dashboard() {
         messages: validMessages,
         chat_links: validLinks,
         delay_seconds: delaySeconds,
+        jitter_seconds: jitterFixed ? 2 : jitterSeconds,
         send_mode: sendMode
       })
       
@@ -175,6 +181,35 @@ export function Dashboard() {
             @{status.username || status.phone}
           </span>
         </div>
+      </div>
+
+      {/* Tier limits */}
+      <div className="card p-4 bg-blue-500/5 border border-blue-500/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+              {tier.toUpperCase()}
+            </span>
+            <span className="text-sm text-gray-400">
+              Доступно: <span className="text-white font-medium">
+                {tier === 'free' ? '3 чата, 10 сообщений' : tier === 'basic' ? '15 чатов, 300 сообщений' : '30 чатов, 1000 сообщений'}
+              </span> в день
+            </span>
+          </div>
+          <button
+            onClick={() => setShowLimits(!showLimits)}
+            className="text-xs text-blue-400 hover:text-blue-300"
+          >
+            {showLimits ? 'Скрыть' : 'Подробнее'}
+          </button>
+        </div>
+        {showLimits && (
+          <div className="mt-3 pt-3 border-t border-blue-500/20 text-xs text-gray-400 space-y-1">
+            <p>• Free: 3 чата, 10 сообщений/день, КД 7-60 сек, джиттер ±2 сек</p>
+            <p>• Basic: 15 чатов, 300 сообщений/день, КД 7-1800 сек, джиттер 0-10 сек</p>
+            <p>• VIP: 30 чатов, 1000 сообщений/день, КД 7-1800 сек, джиттер 0-30 сек</p>
+          </div>
+        )}
       </div>
 
       {/* Main form */}
@@ -404,29 +439,61 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* Delay slider */}
+              {/* Delay input */}
               {sendMode === 'sequential' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm text-gray-400">Интервал между отправками</label>
+                    <label className="text-sm text-gray-400">КД между отправками (сек)</label>
                     <span className="text-sm text-kikio-glow font-medium">
                       {delaySeconds} сек
                     </span>
                   </div>
                   <input
-                    type="range"
+                    type="number"
                     min="7"
-                    max="60"
+                    max="1800"
                     value={delaySeconds}
-                    onChange={(e) => setDelaySeconds(Number(e.target.value))}
-                    className="w-full"
+                    onChange={(e) => setDelaySeconds(Math.max(7, Math.min(1800, Number(e.target.value))))}
+                    className="w-full px-4 py-2.5 rounded-lg bg-black/50 border border-white/10 focus:border-kikio-glow text-sm"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>7 сек (быстро)</span>
-                    <span>60 сек (безопасно)</span>
+                    <span>1800 сек (макс)</span>
                   </div>
                 </div>
               )}
+
+              {/* Jitter settings */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm text-gray-400">Разброс (джиттер)</label>
+                  {jitterFixed ? (
+                    <span className="text-sm text-kikio-glow font-medium">±2 сек (Free)</span>
+                  ) : (
+                    <span className="text-sm text-kikio-glow font-medium">±{jitterSeconds} сек</span>
+                  )}
+                </div>
+                {jitterFixed ? (
+                  <div className="px-4 py-2.5 rounded-lg bg-black/30 border border-white/10 text-sm text-gray-500">
+                    ±2 сек (фиксировано для тарифа Free)
+                  </div>
+                ) : (
+                  <input
+                    type="number"
+                    min="0"
+                    max={jitterMax}
+                    value={jitterSeconds}
+                    onChange={(e) => setJitterSeconds(Math.max(0, Math.min(jitterMax, Number(e.target.value))))}
+                    className="w-full px-4 py-2.5 rounded-lg bg-black/50 border border-white/10 focus:border-kikio-glow text-sm"
+                  />
+                )}
+                {!jitterFixed && (
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0 сек (без разброса)</span>
+                    <span>{jitterMax} сек (макс для {tier})</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
