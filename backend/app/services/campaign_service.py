@@ -178,6 +178,23 @@ async def send_campaign(
     campaign.started_at = datetime.utcnow()
     await db.commit()
     
+    # Check scheduled_at - wait if campaign should start in the future
+    if campaign.scheduled_at:
+        scheduled_dt = campaign.scheduled_at
+        if scheduled_dt.tzinfo is not None:
+            scheduled_dt = scheduled_dt.replace(tzinfo=None)
+        now = datetime.utcnow()
+        if scheduled_dt > now:
+            wait_seconds = (scheduled_dt - now).total_seconds()
+            print(f"Campaign {campaign_id}: Waiting {wait_seconds:.0f} seconds until scheduled time")
+            # Wait in chunks of 30 seconds, checking for stop in between
+            while wait_seconds > 0:
+                if _running_campaigns.get(campaign_id) == "stopped":
+                    return {"success": False, "error": "Campaign stopped before starting"}
+                await asyncio.sleep(min(30, wait_seconds))
+                wait_seconds -= 30
+            print(f"Campaign {campaign_id}: Scheduled time reached, starting now")
+    
     client = await get_telegram_client(db, user_id)
     if not client:
         campaign.status = "failed"

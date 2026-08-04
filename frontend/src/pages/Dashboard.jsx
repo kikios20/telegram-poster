@@ -38,6 +38,8 @@ export function Dashboard() {
   const [showLimits, setShowLimits] = useState(false)
   const [riskAccepted, setRiskAccepted] = useState(false)
   const [jitterSeconds, setJitterSeconds] = useState(2)
+  const [scheduledAt, setScheduledAt] = useState('')
+  const [endsAt, setEndsAt] = useState('')
 
   const tier = user?.tier || 'free'
   const jitterMax = tier === 'vip' ? 30 : tier === 'basic' ? 10 : 2
@@ -159,7 +161,7 @@ export function Dashboard() {
     setIsCreating(true)
     
     try {
-      const campaign = await createCampaign({
+      const campaignData = {
         name: campaignName,
         mode: mode,
         messages: validMessages,
@@ -167,9 +169,22 @@ export function Dashboard() {
         delay_seconds: delaySeconds,
         jitter_seconds: jitterFixed ? 2 : jitterSeconds,
         send_mode: sendMode
-      })
+      }
       
-      await startCampaign(campaign.id)
+      // Add schedule fields if provided
+      if (scheduledAt) {
+        campaignData.scheduled_at = new Date(scheduledAt).toISOString()
+      }
+      if (endsAt) {
+        campaignData.ends_at = new Date(endsAt).toISOString()
+      }
+      
+      const campaign = await createCampaign(campaignData)
+      
+      // Only start immediately if no scheduled_at
+      if (!scheduledAt) {
+        await startCampaign(campaign.id)
+      }
       navigate('/history')
     } catch (error) {
       console.error('Failed to create campaign:', error)
@@ -535,6 +550,28 @@ export function Dashboard() {
             </div>
           </div>
 
+          {/* Schedule fields */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-sm text-gray-400 mb-1 block">Запустить в (опционально)</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 focus:border-kikio-glow text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-400 mb-1 block">Остановить в (опционально)</label>
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 focus:border-kikio-glow text-sm"
+              />
+            </div>
+          </div>
+
           {/* Start button */}
           <motion.button
             onClick={handleCreateAndStart}
@@ -545,10 +582,12 @@ export function Dashboard() {
           >
             {isCreating ? (
               <Loader2 size={24} className="animate-spin" />
+            ) : scheduledAt ? (
+              <Play size={24} />
             ) : (
               <Play size={24} />
             )}
-            <span>Запустить рассылку</span>
+            <span>{scheduledAt ? 'Запланировать рассылку' : 'Запустить рассылку'}</span>
           </motion.button>
           
           {!riskAccepted && validatedChats.length > 0 && (
