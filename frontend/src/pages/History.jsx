@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCampaignStore, useTelegramStore } from '../hooks/useStore'
+import { useCampaignStore, useTelegramStore, api } from '../hooks/useStore'
 import { 
   History, 
   Play, 
@@ -14,7 +14,8 @@ import {
   ChevronDown,
   RefreshCw,
   ExternalLink,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react'
 
 export function HistoryPage() {
@@ -67,6 +68,26 @@ export function HistoryPage() {
       } finally {
         setDeletingId(null)
       }
+    }
+  }
+
+  const handleExportCSV = async (campaignId) => {
+    try {
+      const response = await api.get(`/campaigns/${campaignId}/export-csv`, {
+        responseType: 'blob',
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `campaign_${campaignId}_logs.csv`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export failed:', error)
     }
   }
 
@@ -207,6 +228,13 @@ export function HistoryPage() {
                         <Square size={18} />
                       </button>
                     )}
+                    <button
+                      onClick={() => handleExportCSV(campaign.id)}
+                      className="p-2 rounded-lg text-gray-500 hover:text-green-400 hover:bg-green-400/10"
+                      title="Экспорт в CSV"
+                    >
+                      <Download size={18} />
+                    </button>
                     <button
                       onClick={() => handleDelete(campaign.id)}
                       disabled={deletingId === campaign.id}

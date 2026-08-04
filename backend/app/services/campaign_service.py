@@ -22,6 +22,10 @@ TIER_LIMITS = {
 # In-memory storage for running campaigns (campaign_id -> status)
 _running_campaigns: Dict[int, str] = {}  # campaign_id -> status
 
+# Track current message index for rotation per campaign
+# campaign_id -> current_message_index
+_rotation_index: Dict[int, int] = {}
+
 
 def get_tier_limits(tier: str) -> dict:
     """Get limits for a tier"""
@@ -125,30 +129,31 @@ async def send_with_retry(
     campaign_id: int,
     user_id: int,
     db: AsyncSession,
-    chat_title: str = ""
+    chat_title: str = "",
+    message_index: int = 0
 ) -> bool:
     """Send message with FloodWait handling"""
     try:
         await client.send_message(chat_id, text)
-        await log_send(db, campaign_id, user_id, chat_id, chat_title, 0, "success")
+        await log_send(db, campaign_id, user_id, chat_id, chat_title, message_index, "success")
         return True
     except FloodWait as e:
-        await log_send(db, campaign_id, user_id, chat_id, chat_title, 0, "flood_wait", 
+        await log_send(db, campaign_id, user_id, chat_id, chat_title, message_index, "flood_wait", 
                       f"FloodWait: пауза {e.value} секунд")
         await asyncio.sleep(e.value)
         try:
             await client.send_message(chat_id, text)
-            await log_send(db, campaign_id, user_id, chat_id, chat_title, 0, "success")
+            await log_send(db, campaign_id, user_id, chat_id, chat_title, message_index, "success")
             return True
         except Exception as e2:
-            await log_send(db, campaign_id, user_id, chat_id, chat_title, 0, "error",
+            await log_send(db, campaign_id, user_id, chat_id, chat_title, message_index, "error",
                           f"Повторная ошибка после FloodWait: {str(e2)}")
             return False
     except (PeerIdInvalid, UsernameNotOccupied, UserNotParticipant) as e:
-        await log_send(db, campaign_id, user_id, chat_id, chat_title, 0, "skipped", str(e))
+        await log_send(db, campaign_id, user_id, chat_id, chat_title, message_index, "skipped", str(e))
         return False
     except Exception as e:
-        await log_send(db, campaign_id, user_id, chat_id, chat_title, 0, "error", str(e))
+        await log_send(db, campaign_id, user_id, chat_id, chat_title, message_index, "error", str(e))
         return False
 
 
@@ -178,6 +183,9 @@ async def send_campaign(
     campaign.started_at = datetime.utcnow()
     await db.commit()
     
+    # Initialize rotation index for this campaign
+    _rotation_index[campaign_id] = 0
+    
     # Check scheduled_at - wait if campaign should start in the future
     if campaign.scheduled_at:
         scheduled_dt = campaign.scheduled_at
@@ -200,6 +208,7 @@ async def send_campaign(
         campaign.status = "failed"
         await db.commit()
         _running_campaigns.pop(campaign_id, None)
+        _rotation_index.pop(campaign_id, None)
         return {"success": False, "error": "Telegram не подключен"}
     
     try:
@@ -214,31 +223,37 @@ async def send_campaign(
             iteration += 1
             print(f"Campaign {campaign_id}: Starting iteration {iteration}")
             
+            # Get current rotation index (for sending different messages each iteration)
+            msg_idx = _rotation_index[campaign_id]
+            
             if send_mode == "all_at_once":
-                # Send to all chats simultaneously
+                # Send to all chats simultaneously with rotation
                 tasks = []
                 for chat_link in chat_links:
                     if _running_campaigns.get(campaign_id) == "stopped":
                         break
                     task = send_to_chat(client, campaign_id, user_id, chat_link, messages, 
-                                        base_delay, jitter, db)
+                                        base_delay, jitter, db, msg_idx)
                     tasks.append(task)
                 
                 if tasks:
                     results = await asyncio.gather(*tasks, return_exceptions=True)
             else:
-                # Sequential sending
+                # Sequential sending with rotation
                 for i, chat_link in enumerate(chat_links):
                     if _running_campaigns.get(campaign_id) == "stopped":
                         break
                     
                     await send_to_chat(client, campaign_id, user_id, chat_link, messages,
-                                     base_delay, jitter, db)
+                                     base_delay, jitter, db, msg_idx)
                     
                     # Delay between chats (except for the last one)
                     if i < len(chat_links) - 1:
                         delay = await calculate_delay(base_delay, jitter)
                         await asyncio.sleep(delay)
+            
+            # Increment rotation index for next iteration (with wrap-around)
+            _rotation_index[campaign_id] = (msg_idx + 1) % len(messages) if messages else 0
             
             # Check if stopped before waiting for next iteration
             if _running_campaigns.get(campaign_id) == "stopped":
@@ -270,6 +285,7 @@ async def send_campaign(
         if client.is_connected:
             await client.stop()
         _running_campaigns.pop(campaign_id, None)
+        _rotation_index.pop(campaign_id, None)
     
     return {"success": True}
 
@@ -282,9 +298,10 @@ async def send_to_chat(
     messages: List[str],
     base_delay: int,
     jitter: int,
-    db: AsyncSession
+    db: AsyncSession,
+    start_msg_idx: int = 0
 ):
-    """Send messages to a single chat"""
+    """Send messages to a single chat (starting from specified message index for rotation)"""
     chat_id = extract_chat_id(chat_link)
     chat_title = ""
     
@@ -295,15 +312,18 @@ async def send_to_chat(
     except:
         pass
     
-    # Send messages with delay
-    for i, message in enumerate(messages):
+    # Send messages with delay, starting from rotation index
+    for offset in range(len(messages)):
+        msg_idx = (start_msg_idx + offset) % len(messages)
+        
         if _running_campaigns.get(campaign_id) == "stopped":
             break
         
-        success = await send_with_retry(client, chat_id, message, campaign_id, user_id, db, chat_title)
+        message = messages[msg_idx]
+        success = await send_with_retry(client, chat_id, message, campaign_id, user_id, db, chat_title, msg_idx)
         
         # Delay between messages in the same chat
-        if i < len(messages) - 1 and success:
+        if offset < len(messages) - 1 and success:
             delay = await calculate_delay(base_delay, jitter)
             await asyncio.sleep(delay)
 

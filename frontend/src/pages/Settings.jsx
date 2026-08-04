@@ -35,6 +35,7 @@ export function SettingsPage() {
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [sessionId, setSessionId] = useState('')
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     fetchStatus()
@@ -127,13 +128,63 @@ export function SettingsPage() {
 
           {status.connected && (
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="btn btn-secondary text-sm"
             >
               <LogOut size={16} />
               <span className="ml-2">Отключить</span>
             </button>
           )}
+
+          {/* Logout Confirmation Dialog */}
+          <AnimatePresence>
+            {showLogoutConfirm && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="card p-6 max-w-md w-full"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+                      <AlertTriangle size={32} className="text-red-400" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Отключить Telegram?</h3>
+                    <p className="text-gray-400">
+                      Вы уверены, что хотите отключить аккаунт Telegram? 
+                      Все активные рассылки будут остановлены.
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowLogoutConfirm(false)}
+                      className="btn btn-secondary flex-1"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLogoutConfirm(false)
+                        handleLogout()
+                      }}
+                      className="btn bg-red-500 hover:bg-red-600 text-white flex-1"
+                    >
+                      Отключить
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

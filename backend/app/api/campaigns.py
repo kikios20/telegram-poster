@@ -327,3 +327,72 @@ async def delete_campaign(
     await db.commit()
     
     return {"status": "deleted"}
+
+
+@router.get("/{campaign_id}/export-csv")
+async def export_campaign_logs_csv(
+    campaign_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Экспорт логов рассылки в CSV"""
+    from fastapi.responses import StreamingResponse
+    from datetime import timedelta
+    import io
+    import csv
+    
+    # Get tier limits for retention
+    tier = current_user.tier or "free"
+    limits = get_tier_limits(tier)
+    
+    # Get campaign
+    stmt = select(Campaign).where(
+        Campaign.id == campaign_id,
+        Campaign.user_id == current_user.id
+    )
+    result = await db.execute(stmt)
+    campaign = result.scalar_one_or_none()
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # Get logs with retention filter
+    log_stmt = select(SendLog).where(
+        SendLog.campaign_id == campaign_id
+    ).order_by(SendLog.sent_at.asc())
+    
+    log_result = await db.execute(log_stmt)
+    logs = log_result.scalars().all()
+    
+    # Filter by retention
+    retention_cutoff = datetime.utcnow() - timedelta(hours=limits["log_retention_hours"])
+    logs = [l for l in logs if l.sent_at and l.sent_at >= retention_cutoff]
+    
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(['ID', 'Чат', 'Название чата', 'Сообщение #', 'Статус', 'Время отправки', 'Ошибка'])
+    
+    # Data
+    for log in logs:
+        writer.writerow([
+            log.id,
+            log.chat_id,
+            log.chat_title or '',
+            log.message_index + 1,  # 1-based for user friendliness
+            log.status,
+            log.sent_at.strftime('%Y-%m-%d %H:%M:%S') if log.sent_at else '',
+            log.error_message or ''
+        ])
+    
+    # Prepare response
+    output.seek(0)
+    filename = f"campaign_{campaign_id}_logs_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
