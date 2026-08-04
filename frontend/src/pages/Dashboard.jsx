@@ -482,7 +482,6 @@ export function Dashboard() {
                     min="7"
                     max={maxDelaySeconds}
                     value={delaySeconds}
-                    onChange={(e) => setDelaySeconds(Number(e.target.value))}
                     onBlur={(e) => setDelaySeconds(Math.max(7, Math.min(maxDelaySeconds, Number(e.target.value))))}
                     className="w-full px-4 py-2.5 rounded-lg bg-black/50 border border-white/10 focus:border-kikio-glow text-sm"
                   />

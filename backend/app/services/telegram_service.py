@@ -233,21 +233,53 @@ class TelegramService:
                 return {"valid": False, "error": f"Ошибка: {error_msg[:50]}"}
 
     async def logout(self, user_id: int) -> bool:
-        """Выход из аккаунта"""
+        """Выход из аккаунта с полным завершением сессии в Telegram"""
         session = await self.get_active_session(user_id)
         if not session:
             return True
         
-        # Удаляем клиент из кеша
+        logout_success = False
+        
+        # Пробуем вызвать log_out для завершения сессии в Telegram
         if session.session_id in self._clients:
             client = self._clients[session.session_id]
             try:
+                if not client.is_connected:
+                    await client.connect()
+                await client.log_out()
+                logout_success = True
+                print(f"Successfully logged out Telegram session for user {user_id}")
+            except Exception as e:
+                print(f"Failed to log_out Telegram session: {e}")
+                # Fallback - всё равно деактивируем локально
+        else:
+            # Сессия не в кеше, но может быть в БД - попробуем восстановить
+            try:
+                session_string = decrypt_session(session.encrypted_session)
+                session_name = f"session_{session.session_id}"
+                client = Client(
+                    session_name,
+                    session_string=session_string,
+                    workdir="./sessions/",
+                    no_updates=True
+                )
+                await client.start()
+                await client.log_out()
                 await client.stop()
+                logout_success = True
+                print(f"Successfully logged out Telegram session from DB for user {user_id}")
+            except Exception as e:
+                print(f"Failed to restore and log_out session: {e}")
+        
+        # Удаляем клиент из кеша
+        if session.session_id in self._clients:
+            try:
+                await self._clients[session.session_id].stop()
             except:
                 pass
             del self._clients[session.session_id]
         
-        # Удаляем сессию
+        # Деактивируем сессию в БД
         session.is_active = False
         await self.session.commit()
         

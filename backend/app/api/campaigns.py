@@ -341,6 +341,16 @@ async def export_campaign_logs_csv(
     import io
     import csv
     
+    # Status translation map
+    STATUS_TRANSLATIONS = {
+        "success": "Успешно",
+        "failed": "Ошибка",
+        "error": "Ошибка",
+        "pending": "Ожидание",
+        "skipped": "Пропущено",
+        "flood_wait": "FloodWait"
+    }
+    
     # Get tier limits for retention
     tier = current_user.tier or "free"
     limits = get_tier_limits(tier)
@@ -355,6 +365,9 @@ async def export_campaign_logs_csv(
     
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # Get messages for the campaign
+    messages = campaign.messages or []
     
     # Get logs with retention filter
     log_stmt = select(SendLog).where(
@@ -372,17 +385,26 @@ async def export_campaign_logs_csv(
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Header
-    writer.writerow(['ID', 'Чат', 'Название чата', 'Сообщение #', 'Статус', 'Время отправки', 'Ошибка'])
+    # Header with UTF-8 BOM for Excel compatibility
+    writer.writerow(['ID', 'Чат', 'Название чата', 'Сообщение', 'Статус', 'Время отправки', 'Ошибка'])
     
     # Data
     for log in logs:
+        # Get message text (truncated to 50 chars if too long)
+        msg_idx = log.message_index if log.message_index is not None else 0
+        msg_text = messages[msg_idx] if messages and msg_idx < len(messages) else f"#{msg_idx + 1}"
+        if len(msg_text) > 50:
+            msg_text = msg_text[:47] + "..."
+        
+        # Translate status
+        status_translated = STATUS_TRANSLATIONS.get(log.status, log.status)
+        
         writer.writerow([
             log.id,
             log.chat_id,
             log.chat_title or '',
-            log.message_index + 1,  # 1-based for user friendliness
-            log.status,
+            msg_text,
+            status_translated,
             log.sent_at.strftime('%Y-%m-%d %H:%M:%S') if log.sent_at else '',
             log.error_message or ''
         ])
@@ -393,6 +415,9 @@ async def export_campaign_logs_csv(
     
     return StreamingResponse(
         iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+            "Content-Type": "text/csv; charset=utf-8"
+        }
     )

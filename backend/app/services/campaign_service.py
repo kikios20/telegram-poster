@@ -269,9 +269,10 @@ async def send_campaign(
                     _running_campaigns[campaign_id] = "stopped"
                     break
             
-            # Wait for next iteration - delay between full cycles
-            print(f"Campaign {campaign_id}: Completed iteration {iteration}, waiting {base_delay} seconds for next cycle")
-            await asyncio.sleep(base_delay)
+            # Wait for next iteration - delay between full cycles (with jitter)
+            iteration_delay = await calculate_delay(base_delay, jitter)
+            print(f"Campaign {campaign_id}: Completed iteration {iteration}, waiting {iteration_delay:.1f} seconds for next cycle")
+            await asyncio.sleep(iteration_delay)
         
         # Campaign was stopped
         campaign.status = "stopped"
