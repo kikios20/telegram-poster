@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from contextlib import asynccontextmanager
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .core import settings, engine, get_db
 from .models.database import Base
@@ -16,8 +19,13 @@ async def lifespan(app: FastAPI):
     os.makedirs("./logs", exist_ok=True)
     
     # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        logger.warning("Continuing without database initialization")
     
     yield
     
