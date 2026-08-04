@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
@@ -10,7 +10,7 @@ import bcrypt
 
 from ..core.config import settings
 from ..core.database import get_db
-from ..models.database import User, TelegramSession, generate_api_key
+from ..models.database import User, TelegramSession, SendLog, generate_api_key
 from .schemas import UserCreate, UserLogin, Token, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -151,7 +151,6 @@ async def get_me(
 ):
     """Get current user info with usage limits"""
     from ..services.campaign_service import get_tier_limits
-    from ..models.database import SendLog
     
     # Check if user has Telegram session
     stmt = select(TelegramSession).where(
