@@ -27,6 +27,30 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize database: {e}")
         logger.warning("Continuing without database initialization")
     
+    # Add missing columns (migration)
+    try:
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            # Add scheduled_at column
+            try:
+                await conn.execute(text("""
+                    ALTER TABLE campaigns 
+                    ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP
+                """))
+            except:
+                pass
+            # Add ends_at column
+            try:
+                await conn.execute(text("""
+                    ALTER TABLE campaigns 
+                    ADD COLUMN IF NOT EXISTS ends_at TIMESTAMP
+                """))
+            except:
+                pass
+        logger.info("Database migration completed")
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+    
     yield
     
     # Shutdown
@@ -78,29 +102,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "TelegramPoster"}
-
-
-# Database migration endpoint
-@app.post("/api/migrate")
-async def migrate_db(db=Depends(get_db)):
-    """Add missing columns to campaigns table"""
-    from sqlalchemy import text
-    try:
-        # Add scheduled_at column
-        await db.execute(text("""
-            ALTER TABLE campaigns 
-            ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP
-        """))
-        # Add ends_at column
-        await db.execute(text("""
-            ALTER TABLE campaigns 
-            ADD COLUMN IF NOT EXISTS ends_at TIMESTAMP
-        """))
-        await db.commit()
-        return {"status": "ok", "message": "Migration completed"}
-    except Exception as e:
-        await db.rollback()
-        return {"status": "error", "message": str(e)}
 
 
 # Include routers
