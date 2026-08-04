@@ -51,6 +51,17 @@ async def create_campaign(
     elif tier == "vip" and jitter > 30:
         raise HTTPException(status_code=400, detail="Jitter cannot exceed 30 seconds for VIP tier")
     
+    # Determine initial status
+    now = datetime.utcnow()
+    initial_status = "pending"
+    if data.scheduled_at:
+        # Convert to naive datetime for comparison if needed
+        scheduled_dt = data.scheduled_at
+        if scheduled_dt.tzinfo is not None:
+            scheduled_dt = scheduled_dt.replace(tzinfo=None)
+        if scheduled_dt > now:
+            initial_status = "scheduled"
+    
     campaign = Campaign(
         user_id=current_user.id,
         name=data.name,
@@ -60,7 +71,9 @@ async def create_campaign(
         delay_seconds=data.delay_seconds,
         jitter_seconds=jitter,
         send_mode=data.send_mode,
-        status="pending"
+        status=initial_status,
+        scheduled_at=data.scheduled_at,
+        ends_at=data.ends_at
     )
     
     db.add(campaign)
@@ -73,7 +86,9 @@ async def create_campaign(
         mode=campaign.mode,
         status=campaign.status,
         created_at=campaign.created_at,
-        stats={"total": len(data.chat_links), "sent": 0, "failed": 0}
+        stats={"total": len(data.chat_links), "sent": 0, "failed": 0},
+        scheduled_at=campaign.scheduled_at,
+        ends_at=campaign.ends_at
     )
 
 
@@ -117,7 +132,9 @@ async def list_campaigns(
             mode=c.mode,
             status=c.status,
             created_at=c.created_at,
-            stats={"total": len(c.chat_links), "sent": sent, "failed": failed}
+            stats={"total": len(c.chat_links), "sent": sent, "failed": failed},
+            scheduled_at=c.scheduled_at,
+            ends_at=c.ends_at
         ))
     
     return CampaignList(campaigns=campaign_list)

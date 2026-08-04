@@ -96,28 +96,6 @@ export function Login() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md relative z-10"
       >
-        {/* Server Status Indicator */}
-        <div className="absolute top-0 right-0 flex items-center gap-2 text-sm">
-          {serverStatus === 'checking' && (
-            <span className="flex items-center gap-1.5 text-yellow-400">
-              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-              Сервер запускается...
-            </span>
-          )}
-          {serverStatus === 'error' && (
-            <span className="flex items-center gap-1.5 text-red-400">
-              <span className="w-2 h-2 rounded-full bg-red-400" />
-              Сервер недоступен
-            </span>
-          )}
-          {serverStatus === 'ready' && (
-            <span className="flex items-center gap-1.5 text-green-400">
-              <span className="w-2 h-2 rounded-full bg-green-400" />
-              Сервер готов
-            </span>
-          )}
-        </div>
-
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <LogoText />
@@ -125,6 +103,28 @@ export function Login() {
 
         {/* Card */}
         <div className="glass-strong rounded-2xl p-8">
+          {/* Server Status Indicator - moved to bottom */}
+          <div className="flex items-center justify-center gap-2 text-sm mb-4 pb-4 border-b border-white/10">
+            {serverStatus === 'checking' && (
+              <span className="flex items-center gap-1.5 text-yellow-400">
+                <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                Сервер запускается...
+              </span>
+            )}
+            {serverStatus === 'error' && (
+              <span className="flex items-center gap-1.5 text-red-400">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                Сервер недоступен
+              </span>
+            )}
+            {serverStatus === 'ready' && (
+              <span className="flex items-center gap-1.5 text-green-400">
+                <span className="w-2 h-2 rounded-full bg-green-400" />
+                Сервер готов
+              </span>
+            )}
+          </div>
+          
           {/* Mode tabs */}
           <div className="flex gap-2 p-1 bg-black/30 rounded-xl mb-6">
             <button

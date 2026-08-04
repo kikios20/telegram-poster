@@ -75,6 +75,8 @@ class CampaignCreate(BaseModel):
     delay_seconds: int = Field(ge=7, le=3600)
     jitter_seconds: Optional[int] = Field(default=None, ge=0, le=30)
     send_mode: str = Field(pattern="^(all_at_once|sequential)$")
+    scheduled_at: Optional[datetime] = None  # Планируемое время старта
+    ends_at: Optional[datetime] = None  # Время окончания
 
 
 class CampaignResponse(BaseModel):
@@ -84,6 +86,8 @@ class CampaignResponse(BaseModel):
     status: str
     created_at: datetime
     stats: dict
+    scheduled_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
 
 
 class CampaignList(BaseModel):

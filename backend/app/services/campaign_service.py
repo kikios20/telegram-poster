@@ -227,6 +227,16 @@ async def send_campaign(
             if _running_campaigns.get(campaign_id) == "stopped":
                 break
             
+            # Check if end time has been reached
+            if campaign.ends_at:
+                ends_dt = campaign.ends_at
+                if ends_dt.tzinfo is not None:
+                    ends_dt = ends_dt.replace(tzinfo=None)
+                if datetime.utcnow() >= ends_dt:
+                    print(f"Campaign {campaign_id}: End time reached, stopping")
+                    _running_campaigns[campaign_id] = "stopped"
+                    break
+            
             # Wait for next iteration - delay between full cycles
             print(f"Campaign {campaign_id}: Completed iteration {iteration}, waiting {base_delay} seconds for next cycle")
             await asyncio.sleep(base_delay)
