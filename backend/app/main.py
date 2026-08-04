@@ -80,6 +80,29 @@ async def health():
     return {"status": "ok", "service": "TelegramPoster"}
 
 
+# Database migration endpoint
+@app.post("/api/migrate")
+async def migrate_db(db=Depends(get_db)):
+    """Add missing columns to campaigns table"""
+    from sqlalchemy import text
+    try:
+        # Add scheduled_at column
+        await db.execute(text("""
+            ALTER TABLE campaigns 
+            ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP
+        """))
+        # Add ends_at column
+        await db.execute(text("""
+            ALTER TABLE campaigns 
+            ADD COLUMN IF NOT EXISTS ends_at TIMESTAMP
+        """))
+        await db.commit()
+        return {"status": "ok", "message": "Migration completed"}
+    except Exception as e:
+        await db.rollback()
+        return {"status": "error", "message": str(e)}
+
+
 # Include routers
 app.include_router(auth.router, prefix="/api")
 app.include_router(telegram.router, prefix="/api")
