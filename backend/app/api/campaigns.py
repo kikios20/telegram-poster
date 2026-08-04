@@ -51,6 +51,14 @@ async def create_campaign(
     elif tier == "vip" and jitter > 30:
         raise HTTPException(status_code=400, detail="Jitter cannot exceed 30 seconds for VIP tier")
     
+    # Validate chat count limit for tier
+    chat_count = len(data.chat_links) if data.chat_links else 0
+    if chat_count > limits["max_chats"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Превышен лимит чатов: максимум {limits['max_chats']} для тарифа {tier}"
+        )
+    
     # Determine initial status
     now = datetime.utcnow()
     initial_status = "pending"

@@ -149,7 +149,10 @@ async def get_me(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get current user info"""
+    """Get current user info with usage limits"""
+    from ..services.campaign_service import get_tier_limits
+    from ..models.database import SendLog
+    
     # Check if user has Telegram session
     stmt = select(TelegramSession).where(
         TelegramSession.user_id == current_user.id,
@@ -158,13 +161,43 @@ async def get_me(
     result = await db.execute(stmt)
     has_telegram = result.scalar_one_or_none() is not None
     
+    # Get usage statistics
+    tier = current_user.tier or "free"
+    limits = get_tier_limits(tier)
+    
+    # Count sent messages in last 24 hours
+    one_day_ago = datetime.utcnow() - timedelta(hours=24)
+    logs_stmt = select(SendLog).where(
+        and_(
+            SendLog.user_id == current_user.id,
+            SendLog.status == "success",
+            SendLog.sent_at >= one_day_ago
+        )
+    )
+    logs_result = await db.execute(logs_stmt)
+    sent_today = len(logs_result.scalars().all())
+    
+    # Calculate remaining
+    remaining_messages = max(0, limits["daily_limit"] - sent_today)
+    
+    # Calculate reset time (next midnight UTC)
+    now = datetime.utcnow()
+    tomorrow = datetime(now.year, now.month, now.day) + timedelta(days=1)
+    reset_at = tomorrow.isoformat()
+    
     return {
         "id": current_user.id,
         "email": current_user.email,
         "is_premium": current_user.is_premium,
         "has_telegram": has_telegram,
-        "tier": current_user.tier or "free",
-        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        "tier": tier,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "usage": {
+            "sent_today": sent_today,
+            "daily_limit": limits["daily_limit"],
+            "remaining": remaining_messages,
+            "reset_at": reset_at
+        }
     }
 
 

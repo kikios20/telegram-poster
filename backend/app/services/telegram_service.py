@@ -3,6 +3,7 @@ from pyrogram.errors import SessionPasswordNeeded, PasswordHashInvalid
 from pyrogram.types import User as TGUser
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from datetime import datetime
 import os
 import json
 import base64
@@ -154,8 +155,15 @@ class TelegramService:
         if session.session_id in self._clients:
             client = self._clients[session.session_id]
             if not client.is_connected:
-                await client.start()
-            return client
+                try:
+                    await client.start()
+                    print(f"Reconnected client for user {user_id}")
+                except Exception as e:
+                    print(f"Failed to reconnect, will recreate: {e}")
+                    # Remove from cache to recreate
+                    del self._clients[session.session_id]
+            else:
+                return client
         
         # Расшифровываем и создаём клиент с правильным импортом сессии
         session_string = decrypt_session(session.encrypted_session)
@@ -171,7 +179,9 @@ class TelegramService:
         
         try:
             await client.start()
+            print(f"Created new client for user {user_id}")
         except Exception as e:
+            print(f"Failed to start Telegram client: {e}")
             raise ValueError(f"Failed to connect Telegram session: {e}")
         
         self._clients[session.session_id] = client
@@ -185,7 +195,29 @@ class TelegramService:
             await client.start()
         
         me = await client.get_me()
+        
+        # Refresh session string to keep it alive
+        await self.refresh_session(user_id, client)
+        
         return me
+    
+    async def refresh_session(self, user_id: int, client: Client):
+        """Обновление session string для поддержания активной сессии"""
+        try:
+            session = await self.get_active_session(user_id)
+            if session:
+                # Export updated session string
+                new_session_string = await client.export_session_string()
+                encrypted = encrypt_session(new_session_string)
+                
+                # Update in database
+                session.encrypted_session = encrypted
+                session.last_used = datetime.utcnow()
+                await self.session.commit()
+                
+                print(f"Refreshed session for user {user_id}")
+        except Exception as e:
+            print(f"Failed to refresh session: {e}")
     
     async def validate_chat(self, user_id: int, chat_link: str) -> dict:
         """Валидация чата и получение информации"""
@@ -211,6 +243,9 @@ class TelegramService:
             
             # Получаем title - для личных чатов это может быть имя
             title = getattr(chat, 'title', None) or getattr(chat, 'first_name', 'Telegram User')
+            
+            # Refresh session to keep it alive
+            await self.refresh_session(user_id, client)
             
             return {
                 "valid": True,

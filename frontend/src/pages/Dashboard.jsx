@@ -45,6 +45,7 @@ export function Dashboard() {
   const jitterMax = tier === 'vip' ? 30 : tier === 'basic' ? 10 : 2
   const jitterFixed = tier === 'free'
   const maxDelaySeconds = tier === 'free' ? 60 : 1800  // Free: 60, Basic/VIP: 1800
+  const maxChats = tier === 'vip' ? 30 : tier === 'basic' ? 15 : 3  // Max chats per tier
 
   useEffect(() => {
     fetchStatus()
@@ -94,7 +95,11 @@ export function Dashboard() {
   }
 
   const addChat = () => {
-    setChatLinks([...chatLinks, ''])
+    if (chatLinks.length < maxChats) {
+      setChatLinks([...chatLinks, ''])
+    } else {
+      alert(`Лимит чатов: максимум ${maxChats} для тарифа ${tier.toUpperCase()}`)
+    }
   }
 
   const removeChat = (index) => {
@@ -212,18 +217,25 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Tier limits */}
+      {/* Tier limits with usage */}
       <div className="card p-4 bg-blue-500/5 border border-blue-500/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
             <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
               {tier.toUpperCase()}
             </span>
-            <span className="text-sm text-gray-400">
-              Доступно: <span className="text-white font-medium">
-                {tier === 'free' ? '3 чата, 10 сообщений' : tier === 'basic' ? '15 чатов, 300 сообщений' : '30 чатов, 1000 сообщений'}
-              </span> в день
-            </span>
+            {user?.usage && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-400">
+                  Осталось: <span className={`font-medium ${user.usage.remaining < 3 ? 'text-red-400' : 'text-white'}`}>
+                    {user.usage.remaining}
+                  </span> из {user.usage.daily_limit} сообщений сегодня
+                </span>
+                <span className="text-gray-500 text-xs">
+                  (сброс {new Date(user.usage.reset_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })})
+                </span>
+              </div>
+            )}
           </div>
           <button
             onClick={() => setShowLimits(!showLimits)}
