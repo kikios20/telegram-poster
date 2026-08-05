@@ -9,6 +9,8 @@ import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
 import { ProfilePage } from './pages/Profile'
 import { TestAuth } from './pages/TestAuth'
+import { Terms } from './pages/Terms'
+import { Privacy } from './pages/Privacy'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, token } = useAuthStore()
@@ -98,6 +100,8 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/auto-login" element={<AutoLogin />} />
       <Route path="/test-auth" element={<TestAuth />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       
       <Route
         path="/"

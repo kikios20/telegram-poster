@@ -234,6 +234,12 @@ export function Login() {
                   Зарегистрироваться
                 </Link>
               </p>
+              
+              <div className="text-center text-xs text-gray-500 mt-4 space-x-2">
+                <Link to="/terms" className="hover:text-gray-400">Условия</Link>
+                <span>·</span>
+                <Link to="/privacy" className="hover:text-gray-400">Конфиденциальность</Link>
+              </div>
             </form>
           )}
 

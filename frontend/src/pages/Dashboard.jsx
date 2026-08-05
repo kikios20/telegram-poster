@@ -38,6 +38,7 @@ export function Dashboard() {
   const [showLimits, setShowLimits] = useState(false)
   const [riskAccepted, setRiskAccepted] = useState(false)
   const [jitterSeconds, setJitterSeconds] = useState(2)
+  const [createError, setCreateError] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
 
@@ -116,6 +117,7 @@ export function Dashboard() {
 
   const handleValidateChats = async () => {
     setIsValidating(true)
+    setCreateError('')  // Clear previous errors
     const validLinks = chatLinks.filter(l => l.trim())
     
     // Validate each chat via API
@@ -193,6 +195,10 @@ export function Dashboard() {
       navigate('/history')
     } catch (error) {
       console.error('Failed to create campaign:', error)
+      const errorMsg = error.response?.data?.detail || 
+                       error.response?.data?.message || 
+                       'Ошибка при создании кампании'
+      setCreateError(errorMsg)
     } finally {
       setIsCreating(false)
     }
@@ -600,6 +606,12 @@ export function Dashboard() {
             )}
             <span>{scheduledAt ? 'Запланировать рассылку' : 'Запустить рассылку'}</span>
           </motion.button>
+          
+          {createError && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              {createError}
+            </div>
+          )}
           
           {!riskAccepted && validatedChats.length > 0 && (
             <p className="text-center text-xs text-gray-500 mt-2">

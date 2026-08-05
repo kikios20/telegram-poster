@@ -22,6 +22,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Ad bonus tracking
+    ad_views_today = Column(Integer, default=0)  # Number of ad views today
+    ad_views_reset_at = Column(DateTime, nullable=True)  # When the counter resets
+    bonus_messages = Column(Integer, default=0)  # Bonus messages earned from ads
+    
     telegram_sessions = relationship("TelegramSession", back_populates="user", cascade="all, delete-orphan")
     campaigns = relationship("Campaign", back_populates="user", cascade="all, delete-orphan")
     logs = relationship("SendLog", back_populates="user", cascade="all, delete-orphan")

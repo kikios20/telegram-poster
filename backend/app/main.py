@@ -47,6 +47,28 @@ async def lifespan(app: FastAPI):
                 """))
             except:
                 pass
+            # Add ad bonus columns
+            try:
+                await conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN IF NOT EXISTS ad_views_today INTEGER DEFAULT 0
+                """))
+            except:
+                pass
+            try:
+                await conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN IF NOT EXISTS ad_views_reset_at TIMESTAMP
+                """))
+            except:
+                pass
+            try:
+                await conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN IF NOT EXISTS bonus_messages INTEGER DEFAULT 0
+                """))
+            except:
+                pass
         logger.info("Database migration completed")
     except Exception as e:
         logger.error(f"Migration failed: {e}")
@@ -65,10 +87,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS
+# CORS - restricted to specific origins
+ALLOWED_ORIGINS = [
+    "https://telegram-poster-spa.onrender.com",
+    "http://localhost:5173",  # For local development
+    "http://localhost:3000",  # Alternative local dev port
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,7 +109,7 @@ async def options_handler(path: str):
     return Response(
         status_code=200,
         headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": "https://telegram-poster-spa.onrender.com",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Authorization, Content-Type",
             "Access-Control-Max-Age": "3600",

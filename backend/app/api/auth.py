@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -7,6 +7,54 @@ from datetime import datetime, timedelta
 from typing import Optional
 import asyncio
 import bcrypt
+import time
+
+# Simple in-memory rate limiter for login attempts
+class RateLimiter:
+    def __init__(self, max_attempts: int = 10, window_seconds: int = 900):
+        self.max_attempts = max_attempts  # 10 attempts
+        self.window_seconds = window_seconds  # 15 minutes
+        self._attempts = {}  # ip -> [(timestamp, success)]
+    
+    def is_rate_limited(self, ip: str) -> tuple[bool, int]:
+        """Returns (is_limited, seconds_until_reset)"""
+        now = time.time()
+        if ip not in self._attempts:
+            return False, 0
+        
+        # Clean old attempts
+        self._attempts[ip] = [
+            (ts, s) for ts, s in self._attempts[ip]
+            if now - ts < self.window_seconds
+        ]
+        
+        if not self._attempts[ip]:
+            del self._attempts[ip]
+            return False, 0
+        
+        failed_attempts = [ts for ts, s in self._attempts[ip] if not s]
+        if len(failed_attempts) >= self.max_attempts:
+            oldest = min(failed_attempts)
+            reset_at = int(oldest + self.window_seconds - now)
+            return True, max(0, reset_at)
+        
+        return False, 0
+    
+    def record_attempt(self, ip: str, success: bool):
+        """Record a login attempt"""
+        if ip not in self._attempts:
+            self._attempts[ip] = []
+        self._attempts[ip].append((time.time(), success))
+        
+        # Cleanup old entries periodically
+        if len(self._attempts[ip]) > self.max_attempts * 2:
+            now = time.time()
+            self._attempts[ip] = [
+                (ts, s) for ts, s in self._attempts[ip]
+                if now - ts < self.window_seconds
+            ]
+
+rate_limiter = RateLimiter()
 
 from ..core.config import settings
 from ..core.database import get_db
@@ -105,13 +153,25 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     """Login with email and password"""
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Check rate limit
+    is_limited, seconds_left = rate_limiter.is_rate_limited(client_ip)
+    if is_limited:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many login attempts. Try again in {seconds_left} seconds."
+        )
+    
     stmt = select(User).where(User.email == form_data.username)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
     if not user or not await verify_password(form_data.password, user.hashed_password):
+        rate_limiter.record_attempt(client_ip, success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
@@ -122,6 +182,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
             status_code=403,
             detail="Account is deactivated"
         )
+    
+    # Record successful login
+    rate_limiter.record_attempt(client_ip, success=True)
     
     access_token = create_access_token(data={"sub": str(user.id)})
     return Token(access_token=access_token)
@@ -142,6 +205,60 @@ async def login_with_api_key(api_key: str, db: AsyncSession = Depends(get_db)):
     
     access_token = create_access_token(data={"sub": str(user.id)})
     return Token(access_token=access_token)
+
+
+# Constants for ad bonus system
+AD_BONUS_MESSAGES = 5  # Messages earned per ad view
+MAX_AD_VIEWS_PER_DAY = 10  # Maximum ad views per day
+
+
+@router.post("/claim-ad-bonus")
+async def claim_ad_bonus(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Claim bonus messages for watching an ad (placeholder)"""
+    now = datetime.utcnow()
+    
+    # Check if user is basic or vip (ad bonus only for paid tiers to start)
+    if current_user.tier == "free":
+        return {
+            "success": True,
+            "bonus_earned": 0,
+            "bonus_messages": 0,
+            "message": "Upgrade to Basic or VIP to earn bonus messages by watching ads"
+        }
+    
+    # Check and reset ad views counter if needed
+    if current_user.ad_views_reset_at is None or now >= current_user.ad_views_reset_at:
+        current_user.ad_views_today = 0
+        tomorrow = datetime(now.year, now.month, now.day) + timedelta(days=1)
+        current_user.ad_views_reset_at = tomorrow
+    
+    # Check if max views reached
+    if current_user.ad_views_today >= MAX_AD_VIEWS_PER_DAY:
+        return {
+            "success": False,
+            "bonus_earned": 0,
+            "bonus_messages": current_user.bonus_messages,
+            "ad_views_today": current_user.ad_views_today,
+            "max_ad_views": MAX_AD_VIEWS_PER_DAY,
+            "message": f"Maximum {MAX_AD_VIEWS_PER_DAY} ad views reached for today. Reset at midnight UTC."
+        }
+    
+    # Award bonus
+    current_user.ad_views_today += 1
+    current_user.bonus_messages += AD_BONUS_MESSAGES
+    await db.commit()
+    
+    return {
+        "success": True,
+        "bonus_earned": AD_BONUS_MESSAGES,
+        "bonus_messages": current_user.bonus_messages,
+        "ad_views_today": current_user.ad_views_today,
+        "max_ad_views": MAX_AD_VIEWS_PER_DAY,
+        "message": f"Earned {AD_BONUS_MESSAGES} bonus messages! You have {current_user.bonus_messages} total bonus messages."
+    }
 
 
 @router.get("/me")
@@ -176,13 +293,24 @@ async def get_me(
     logs_result = await db.execute(logs_stmt)
     sent_today = len(logs_result.scalars().all())
     
-    # Calculate remaining
-    remaining_messages = max(0, limits["daily_limit"] - sent_today)
+    # Calculate remaining (base limit + bonus messages)
+    remaining_messages = max(0, limits["daily_limit"] - sent_today) + (current_user.bonus_messages or 0)
     
     # Calculate reset time (next midnight UTC)
     now = datetime.utcnow()
     tomorrow = datetime(now.year, now.month, now.day) + timedelta(days=1)
     reset_at = tomorrow.isoformat()
+    
+    # Ad bonus info
+    ad_bonus = None
+    if tier != "free":
+        ad_views_reset = current_user.ad_views_reset_at.isoformat() if current_user.ad_views_reset_at else reset_at
+        ad_bonus = {
+            "ad_views_today": current_user.ad_views_today or 0,
+            "max_ad_views": MAX_AD_VIEWS_PER_DAY,
+            "bonus_messages": current_user.bonus_messages or 0,
+            "reset_at": ad_views_reset
+        }
     
     return {
         "id": current_user.id,
@@ -195,8 +323,10 @@ async def get_me(
             "sent_today": sent_today,
             "daily_limit": limits["daily_limit"],
             "remaining": remaining_messages,
-            "reset_at": reset_at
-        }
+            "reset_at": reset_at,
+            "bonus_messages": current_user.bonus_messages or 0
+        },
+        "ad_bonus": ad_bonus
     }
 
 
