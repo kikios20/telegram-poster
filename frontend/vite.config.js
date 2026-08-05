@@ -1,7 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { copyFileSync, existsSync } from 'fs'
+import { copyFileSync, existsSync, mkdirSync } from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
@@ -12,6 +15,11 @@ export default defineConfig({
         const redirectsSrc = path.resolve(__dirname, '../_redirects')
         const redirectsDist = path.resolve(__dirname, 'dist/_redirects')
         if (existsSync(redirectsSrc)) {
+          // Ensure dist directory exists
+          const distDir = path.dirname(redirectsDist)
+          if (!existsSync(distDir)) {
+            mkdirSync(distDir, { recursive: true })
+          }
           copyFileSync(redirectsSrc, redirectsDist)
         }
       }
