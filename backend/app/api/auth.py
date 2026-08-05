@@ -220,13 +220,15 @@ async def claim_ad_bonus(
     """Claim bonus messages for watching an ad (placeholder)"""
     now = datetime.utcnow()
     
-    # Check if user is basic or vip (ad bonus only for paid tiers to start)
-    if current_user.tier == "free":
+    # Ad bonus only for Free tier users
+    if current_user.tier != "free":
         return {
-            "success": True,
+            "success": False,
             "bonus_earned": 0,
-            "bonus_messages": 0,
-            "message": "Upgrade to Basic or VIP to earn bonus messages by watching ads"
+            "bonus_messages": current_user.bonus_messages or 0,
+            "ad_views_today": current_user.ad_views_today or 0,
+            "max_ad_views": 0,
+            "message": "Ad bonus is only available for Free tier users"
         }
     
     # Check and reset ad views counter if needed
@@ -240,7 +242,7 @@ async def claim_ad_bonus(
         return {
             "success": False,
             "bonus_earned": 0,
-            "bonus_messages": current_user.bonus_messages,
+            "bonus_messages": current_user.bonus_messages or 0,
             "ad_views_today": current_user.ad_views_today,
             "max_ad_views": MAX_AD_VIEWS_PER_DAY,
             "message": f"Maximum {MAX_AD_VIEWS_PER_DAY} ad views reached for today. Reset at midnight UTC."
@@ -248,7 +250,7 @@ async def claim_ad_bonus(
     
     # Award bonus
     current_user.ad_views_today += 1
-    current_user.bonus_messages += AD_BONUS_MESSAGES
+    current_user.bonus_messages = (current_user.bonus_messages or 0) + AD_BONUS_MESSAGES
     await db.commit()
     
     return {
@@ -301,9 +303,9 @@ async def get_me(
     tomorrow = datetime(now.year, now.month, now.day) + timedelta(days=1)
     reset_at = tomorrow.isoformat()
     
-    # Ad bonus info
+    # Ad bonus info - only for Free tier
     ad_bonus = None
-    if tier != "free":
+    if tier == "free":
         ad_views_reset = current_user.ad_views_reset_at.isoformat() if current_user.ad_views_reset_at else reset_at
         ad_bonus = {
             "ad_views_today": current_user.ad_views_today or 0,
