@@ -49,7 +49,7 @@ async def check_campaign_limits(db: AsyncSession, user: User, campaign: Campaign
     if chat_count > limits["max_chats"]:
         return False, f"Превышен лимит чатов: максимум {limits['max_chats']} для тарифа {tier}"
     
-    # Check daily message limit
+    # Check daily message limit (including bonus messages for free tier)
     one_day_ago = datetime.utcnow() - timedelta(hours=24)
     logs_stmt = select(SendLog).where(
         and_(
@@ -61,10 +61,15 @@ async def check_campaign_limits(db: AsyncSession, user: User, campaign: Campaign
     logs_result = await db.execute(logs_stmt)
     sent_today = len(logs_result.scalars().all())
     
+    # Calculate total available (base limit + bonus messages)
+    bonus_messages = user.bonus_messages or 0
+    total_limit = limits["daily_limit"] + bonus_messages
+    
     total_to_send = chat_count * (len(campaign.messages) if campaign.messages else 1)
-    if sent_today + total_to_send > limits["daily_limit"]:
-        remaining = limits["daily_limit"] - sent_today
-        return False, f"Превышен дневной лимит: осталось {remaining} сообщений из {limits['daily_limit']}"
+    if sent_today + total_to_send > total_limit:
+        remaining = total_limit - sent_today
+        bonus_info = f" (из них {bonus_messages} бонусных)" if bonus_messages > 0 else ""
+        return False, f"Превышен дневной лимит: осталось {remaining} сообщений{bonus_info}"
     
     return True, ""
 

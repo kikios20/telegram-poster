@@ -14,8 +14,17 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [error, setError] = useState('')
+  const [sessionExpired, setSessionExpired] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [serverStatus, setServerStatus] = useState('checking') // 'checking', 'ready', 'error'
+
+  // Check for expired session message
+  useEffect(() => {
+    if (localStorage.getItem('session_expired') === 'true') {
+      setSessionExpired(true)
+      localStorage.removeItem('session_expired')
+    }
+  }, [])
 
   // Check backend status
   useEffect(() => {
@@ -158,6 +167,18 @@ export function Login() {
               </div>
             </button>
           </div>
+
+          {/* Session expired message */}
+          {sessionExpired && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400"
+            >
+              <AlertCircle size={18} />
+              <span>Сессия истекла, войдите заново</span>
+            </motion.div>
+          )}
 
           {/* Error message */}
           {error && (

@@ -223,9 +223,12 @@ export function Register() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-6">
-          Kikio Telegram Poster © 2026
-        </p>
+        <div className="text-center text-gray-500 text-sm mt-6 space-x-3">
+          <span>Kikio Telegram Poster © 2026</span>
+          <Link to="/terms" className="hover:text-gray-400">Условия</Link>
+          <span>·</span>
+          <Link to="/privacy" className="hover:text-gray-400">Конфиденциальность</Link>
+        </div>
       </motion.div>
     </div>
   )

@@ -23,7 +23,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Check if it's due to expiration (not just logout)
+      const isExpired = error.response?.data?.detail?.toLowerCase?.()?.includes('expired') ||
+                       error.response?.data?.detail?.toLowerCase?.()?.includes('token')
       useAuthStore.getState().logout()
+      // Show message if it's an expiration
+      if (isExpired || localStorage.getItem('token')) {
+        localStorage.setItem('session_expired', 'true')
+      }
     }
     return Promise.reject(error)
   }

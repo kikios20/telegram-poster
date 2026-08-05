@@ -1,13 +1,30 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 import asyncio
 import bcrypt
 import time
+
+
+async def check_and_update_tier(db: AsyncSession, user) -> str:
+    """Check if tier has expired and downgrade to free if needed"""
+    if user.tier and user.tier != "free" and user.tier_expires_at:
+        if datetime.utcnow() > user.tier_expires_at:
+            # Downgrade to free
+            from ..models.database import User
+            stmt = (
+                update(User)
+                .where(User.id == user.id)
+                .values(tier="free", tier_expires_at=None)
+            )
+            await db.execute(stmt)
+            await db.commit()
+            return "free"
+    return user.tier or "free"
 
 # Simple in-memory rate limiter for login attempts
 class RateLimiter:
@@ -114,6 +131,9 @@ async def get_current_user(
     
     if user is None:
         raise credentials_exception
+    
+    # Check and update tier if expired (for all API calls)
+    await check_and_update_tier(db, user)
     
     return user
 
@@ -271,6 +291,9 @@ async def get_me(
     """Get current user info with usage limits"""
     from ..services.campaign_service import get_tier_limits
     
+    # Check and update tier if expired
+    tier = await check_and_update_tier(db, current_user)
+    
     # Check if user has Telegram session
     stmt = select(TelegramSession).where(
         TelegramSession.user_id == current_user.id,
@@ -280,7 +303,6 @@ async def get_me(
     has_telegram = result.scalar_one_or_none() is not None
     
     # Get usage statistics
-    tier = current_user.tier or "free"
     limits = get_tier_limits(tier)
     
     # Count sent messages in last 24 hours

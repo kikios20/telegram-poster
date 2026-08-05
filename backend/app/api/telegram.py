@@ -193,7 +193,15 @@ async def get_status(
             last_name=me.last_name,
             user_id=me.id
         )
-    except Exception:
+    except Exception as e:
+        error_msg = str(e).lower()
+        # Check if it's an authorization error
+        if any(x in error_msg for x in ['unauthorized', 'token', 'auth', 'session', 'expired']):
+            # Mark session as inactive in DB
+            await service.deactivate_session(current_user.id)
+            return TelegramStatus(connected=False)
+        
+        # For other errors, still return connected=True (phone still exists)
         return TelegramStatus(
             connected=True,
             phone=session.phone
@@ -241,4 +249,20 @@ async def logout(
     service = TelegramService(db)
     await service.logout(current_user.id)
     
-    return {"status": "logged_out"}
+    # Stop all running campaigns for this user
+    from sqlalchemy import update
+    from ..models.database import Campaign
+    stmt = (
+        update(Campaign)
+        .where(
+            and_(
+                Campaign.user_id == current_user.id,
+                Campaign.status == "running"
+            )
+        )
+        .values(status="stopped")
+    )
+    await db.execute(stmt)
+    await db.commit()
+    
+    return {"status": "logged_out", "campaigns_stopped": True}

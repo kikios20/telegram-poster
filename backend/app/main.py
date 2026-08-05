@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from contextlib import asynccontextmanager
@@ -128,8 +128,28 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Health check
 @app.get("/health")
-async def health():
-    return {"status": "ok", "service": "TelegramPoster"}
+async def health(db = Depends(get_db)):
+    from datetime import datetime
+    from sqlalchemy import text
+    try:
+        # Check database connection
+        await db.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)[:50]}"
+        return {
+            "status": "degraded",
+            "service": "TelegramPoster",
+            "database": db_status,
+            "server_time": datetime.utcnow().isoformat()
+        }
+    
+    return {
+        "status": "healthy",
+        "service": "TelegramPoster",
+        "database": db_status,
+        "server_time": datetime.utcnow().isoformat()
+    }
 
 
 # Include routers

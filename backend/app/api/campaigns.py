@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from datetime import datetime
 from typing import List
 import asyncio
@@ -63,10 +63,11 @@ async def create_campaign(
     now = datetime.utcnow()
     initial_status = "pending"
     if data.scheduled_at:
-        # Convert to naive datetime for comparison if needed
+        # Convert timezone-aware datetime to UTC naive datetime
         scheduled_dt = data.scheduled_at
         if scheduled_dt.tzinfo is not None:
-            scheduled_dt = scheduled_dt.replace(tzinfo=None)
+            # Convert to UTC and remove timezone info
+            scheduled_dt = scheduled_dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         if scheduled_dt > now:
             initial_status = "scheduled"
     
@@ -211,6 +212,22 @@ async def start_campaign(
     current_user: User = Depends(get_current_user)
 ):
     """Запуск рассылки"""
+    # Check if user already has running campaigns
+    running_stmt = select(Campaign).where(
+        and_(
+            Campaign.user_id == current_user.id,
+            Campaign.status == "running"
+        )
+    )
+    running_result = await db.execute(running_stmt)
+    running_campaigns = running_result.scalars().all()
+    
+    if running_campaigns:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Уже есть запущенная кампания. Остановите её перед запуском новой."
+        )
+    
     stmt = select(Campaign).where(
         Campaign.id == campaign_id,
         Campaign.user_id == current_user.id

@@ -2,7 +2,7 @@ from pyrogram import Client
 from pyrogram.errors import SessionPasswordNeeded, PasswordHashInvalid
 from pyrogram.types import User as TGUser
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update, and_
 from datetime import datetime
 import os
 import json
@@ -266,6 +266,18 @@ class TelegramService:
                 return {"valid": False, "error": "Нет прав на отправку сообщений"}
             else:
                 return {"valid": False, "error": f"Ошибка: {error_msg[:50]}"}
+
+    async def deactivate_session(self, user_id: int) -> bool:
+        """Deactivate session in DB without calling Telegram API"""
+        stmt = update(TelegramSession).where(
+            and_(
+                TelegramSession.user_id == user_id,
+                TelegramSession.is_active == True
+            )
+        ).values(is_active=False)
+        await self.db.execute(stmt)
+        await self.db.commit()
+        return True
 
     async def logout(self, user_id: int) -> bool:
         """Выход из аккаунта с полным завершением сессии в Telegram"""
