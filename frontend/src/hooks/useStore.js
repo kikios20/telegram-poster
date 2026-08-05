@@ -5,7 +5,7 @@ import axios from 'axios'
 const API_URL = 'https://telegram-poster-api.onrender.com/api'
 
 // Create axios instance with interceptors
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
 })
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { useTelegramStore, useCampaignStore, useAuthStore } from '../hooks/useStore'
+import { useTelegramStore, useCampaignStore, useAuthStore, api } from '../hooks/useStore'
 import { 
   Send, 
   Plus, 
@@ -22,7 +22,7 @@ import {
 
 export function Dashboard() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, fetchUser } = useAuthStore()
   const { status, fetchStatus } = useTelegramStore()
   const { createCampaign, startCampaign } = useCampaignStore()
   
@@ -50,6 +50,7 @@ export function Dashboard() {
 
   useEffect(() => {
     fetchStatus()
+    fetchUser()
   }, [])
 
   // Redirect if not connected
@@ -215,10 +216,10 @@ export function Dashboard() {
           </p>
         </div>
         
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30">
-          <span className="status-dot status-success" />
-          <span className="text-sm text-green-400">
-            @{status.username || status.phone}
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${status.connected ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+          <span className={`status-dot ${status.connected ? 'status-success' : 'status-error'}`} />
+          <span className={`text-sm ${status.connected ? 'text-green-400' : 'text-red-400'}`}>
+            {status.connected ? `@${status.username || status.phone}` : 'Telegram не подключен'}
           </span>
         </div>
       </div>
@@ -243,12 +244,35 @@ export function Dashboard() {
               </div>
             )}
           </div>
-          <button
-            onClick={() => setShowLimits(!showLimits)}
-            className="text-xs text-blue-400 hover:text-blue-300"
-          >
-            {showLimits ? 'Скрыть' : 'Подробнее'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Ad bonus button for Free tier */}
+            {tier === 'free' && user?.ad_bonus && (
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await api.post('/auth/claim-ad-bonus')
+                    if (res.data.success) {
+                      alert(`+${res.data.bonus_earned} бонусных сообщений!`)
+                      fetchUser()
+                    } else {
+                      alert(res.data.message)
+                    }
+                  } catch (err) {
+                    alert('Ошибка при получении бонуса')
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-medium hover:bg-yellow-500/30 transition-colors"
+              >
+                📺 Реклама (+{user.ad_bonus.max_ad_views - user.ad_bonus.ad_views_today} просмотров)
+              </button>
+            )}
+            <button
+              onClick={() => setShowLimits(!showLimits)}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              {showLimits ? 'Скрыть' : 'Подробнее'}
+            </button>
+          </div>
         </div>
         {showLimits && (
           <div className="mt-3 pt-3 border-t border-blue-500/20 text-xs text-gray-400 space-y-1">
